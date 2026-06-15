@@ -1,8 +1,9 @@
-import { FileText, LayoutTemplate, Plus, Search } from 'lucide-react'
+import { FileText, LayoutTemplate, Plus, Search, Star } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { CmsPageModal, FooterLinksEditor } from '@/components/admin/CmsPageModal'
+import { FeaturedActivitiesTab } from '@/components/admin/FeaturedActivitiesTab'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { getApiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -15,11 +16,12 @@ import {
   type CmsPagePayload,
 } from '@/services/cmsService'
 
-type CmsTab = 'pages' | 'footer'
+type CmsTab = 'pages' | 'footer' | 'featured'
 
 const tabs: { id: CmsTab; label: string; icon: typeof FileText }[] = [
   { id: 'pages', label: 'Information Pages', icon: FileText },
   { id: 'footer', label: 'Footer Settings', icon: LayoutTemplate },
+  { id: 'featured', label: 'Featured Activities', icon: Star },
 ]
 
 const fieldClassName = cn(
@@ -127,7 +129,7 @@ export function AdminCmsSection() {
       <div>
         <h1 className="text-xl font-bold text-foreground lg:text-2xl">Content Management</h1>
         <p className="text-xs text-muted-foreground sm:text-sm">
-          Manage marketplace information pages and footer content.
+          Manage marketplace information pages, footer content, and featured activity order.
         </p>
       </div>
 
@@ -258,6 +260,8 @@ export function AdminCmsSection() {
             </table>
           </div>
         </div>
+      ) : activeTab === 'featured' ? (
+        <FeaturedActivitiesTab />
       ) : (
         <form onSubmit={(e) => void handleSaveFooter(e)} className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-6">
           {loadingFooter ? (

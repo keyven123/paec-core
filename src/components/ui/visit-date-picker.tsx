@@ -7,6 +7,13 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
+import {
+  getEarliestBookableDate,
+  getManilaTodayDate,
+  getManilaTodayIso,
+  isTodayPastCutoff,
+  isVisitDateBookable,
+} from '@/lib/visitDate'
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const
 const MONTHS = [
@@ -29,8 +36,9 @@ type VisitDatePickerProps = {
   onChange: (value: string) => void
   label?: string
   blockedDates?: string[]
+  todayCutoffTime?: string | null
   minDate?: Date
-  onRejectedDate?: (reason: 'blocked' | 'past') => void
+  onRejectedDate?: (reason: 'blocked' | 'past' | 'cutoff') => void
 }
 
 function toIsoDate(date: Date) {
@@ -68,11 +76,17 @@ export function VisitDatePicker({
   onChange,
   label = 'Date of Visit',
   blockedDates = [],
+  todayCutoffTime,
   minDate,
   onRejectedDate,
 }: VisitDatePickerProps) {
-  const today = useMemo(() => startOfDay(new Date()), [])
-  const earliestDate = minDate ?? today
+  const today = useMemo(() => getManilaTodayDate(), [])
+  const todayIso = useMemo(() => getManilaTodayIso(), [])
+  const earliestDate = useMemo(
+    () => minDate ?? getEarliestBookableDate(todayCutoffTime),
+    [minDate, todayCutoffTime],
+  )
+  const todayBookable = !isTodayPastCutoff(todayCutoffTime)
   const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates])
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() =>
@@ -149,6 +163,11 @@ export function VisitDatePicker({
       return
     }
 
+    if (iso === todayIso && !isVisitDateBookable(iso, todayCutoffTime)) {
+      onRejectedDate?.('cutoff')
+      return
+    }
+
     onChange(iso)
     setOpen(false)
   }
@@ -157,10 +176,13 @@ export function VisitDatePicker({
 
   useEffect(() => {
     if (!value) return
-    if (blockedSet.has(value)) {
+    if (
+      blockedSet.has(value) ||
+      !isVisitDateBookable(value, todayCutoffTime)
+    ) {
       onChange('')
     }
-  }, [value, blockedSet, onChange])
+  }, [value, blockedSet, todayCutoffTime, onChange])
 
   return (
     <div ref={containerRef} className="relative">
@@ -239,10 +261,16 @@ export function VisitDatePicker({
             {calendarDays.map(({ date, inMonth }) => {
               const iso = toIsoDate(date)
               const isSelected = selectedDate && isSameDay(date, selectedDate)
-              const isToday = isSameDay(date, today)
+              const isToday = iso === todayIso
               const isBlocked = blockedSet.has(iso)
               const isPast = startOfDay(date) < earliestDate
-              const isDisabled = isBlocked || isPast
+              const isCutoff =
+                isToday &&
+                !todayBookable &&
+                inMonth &&
+                !isBlocked &&
+                !isPast
+              const isDisabled = isBlocked || isPast || isCutoff
 
               return (
                 <button
@@ -250,7 +278,13 @@ export function VisitDatePicker({
                   type="button"
                   disabled={isDisabled}
                   onClick={() => selectDate(date)}
-                  title={isBlocked ? 'This date is not available' : undefined}
+                  title={
+                    isBlocked
+                      ? 'This date is not available'
+                      : isCutoff
+                        ? 'Today is no longer available for booking'
+                        : undefined
+                  }
                   className={cn(
                     'flex size-9 items-center justify-center rounded-lg text-sm transition-colors',
                     !inMonth && 'text-muted-foreground/50',
@@ -291,9 +325,12 @@ export function VisitDatePicker({
             <button
               type="button"
               onClick={() => {
-                const todayIso = toIsoDate(today)
                 if (blockedSet.has(todayIso) || today < earliestDate) {
                   onRejectedDate?.(blockedSet.has(todayIso) ? 'blocked' : 'past')
+                  return
+                }
+                if (!todayBookable) {
+                  onRejectedDate?.('cutoff')
                   return
                 }
                 onChange(todayIso)

@@ -37,6 +37,7 @@ export type PublicEvent = {
     date_to?: string
   }>
   event_locations?: PublicEventLocation[]
+  today_cutoff_time?: string | null
 }
 
 export type PublicEventTicket = {
@@ -173,6 +174,7 @@ export function mapPublicEventToAttraction(
       name: ticket.name,
       price: toNumber(ticket.price),
     })),
+    todayCutoffTime: event.today_cutoff_time ?? null,
   }
 }
 
@@ -226,6 +228,17 @@ export function buildTrendingEvents(activities: Attraction[]): TrendingEvent[] {
 }
 
 export const marketplaceService = {
+  async listFeaturedActivities(limit = 4): Promise<Attraction[]> {
+    const { data } = await api.get<PaginatedPublicEvents>('/v1/public/events', {
+      params: {
+        type: 'featured',
+        per_page: limit,
+      },
+    })
+
+    return data.data.map((event) => mapPublicEventToAttraction(event))
+  },
+
   async listActivities(perPage = 100): Promise<Attraction[]> {
     const { data } = await api.get<PaginatedPublicEvents>('/v1/public/events', {
       params: {

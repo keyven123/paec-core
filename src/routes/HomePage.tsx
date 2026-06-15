@@ -17,6 +17,7 @@ import {
 export function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [activities, setActivities] = useState<Attraction[]>([])
+  const [featuredActivities, setFeaturedActivities] = useState<Attraction[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,10 +26,19 @@ export function HomePage() {
     async function loadActivities() {
       setLoading(true)
       try {
-        const list = await marketplaceService.listActivities()
-        if (!cancelled) setActivities(list)
+        const [list, featured] = await Promise.all([
+          marketplaceService.listActivities(),
+          marketplaceService.listFeaturedActivities(),
+        ])
+        if (!cancelled) {
+          setActivities(list)
+          setFeaturedActivities(featured)
+        }
       } catch {
-        if (!cancelled) setActivities([])
+        if (!cancelled) {
+          setActivities([])
+          setFeaturedActivities([])
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -48,13 +58,15 @@ export function HomePage() {
   )
   const featuredAttractions = useMemo(
     () =>
-      activities.slice(0, 4).map((activity) => ({
-        id: activity.id,
-        name: activity.name,
-        price: activity.price,
-        image: activity.image,
-      })),
-    [activities],
+      (featuredActivities.length > 0 ? featuredActivities : activities)
+        .slice(0, 4)
+        .map((activity) => ({
+          id: activity.id,
+          name: activity.name,
+          price: activity.price,
+          image: activity.image,
+        })),
+    [featuredActivities, activities],
   )
 
   return (

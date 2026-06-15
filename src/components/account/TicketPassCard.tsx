@@ -98,6 +98,15 @@ export function TicketPassCard({ ticket }: TicketPassCardProps) {
     ticket.status === 'transferred' ||
     ticket.is_past_due
 
+  const pastStatusMessage =
+    ticket.status === 'transferred'
+      ? 'This ticket has been transferred.'
+      : ticket.status === 'used'
+        ? 'This ticket has been used.'
+        : ticket.status === 'expired' || ticket.is_past_due
+          ? 'This ticket has expired.'
+          : 'This ticket is no longer active.'
+
   useEffect(() => {
     if (!qrModalOpen) return
 
@@ -191,11 +200,7 @@ export function TicketPassCard({ ticket }: TicketPassCardProps) {
 
           {isPast && (
             <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-xs font-medium text-paec-violet">
-              {ticket.status === 'transferred'
-                ? 'This ticket has been transferred.'
-                : ticket.status === 'used'
-                  ? 'This ticket has been used.'
-                  : 'This ticket is no longer active.'}
+              {pastStatusMessage}
             </p>
           )}
         </section>
@@ -230,7 +235,9 @@ export function TicketPassCard({ ticket }: TicketPassCardProps) {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {ticket.status === 'pending'
                     ? 'Activating your ticket…'
-                    : 'Scan unavailable for this ticket'}
+                    : ticket.status === 'expired' || ticket.is_past_due
+                      ? 'This ticket has expired'
+                      : 'Scan unavailable for this ticket'}
                 </p>
               </div>
             )}

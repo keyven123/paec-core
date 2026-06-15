@@ -31,6 +31,46 @@ export function isCustomerAuthenticated(): boolean {
   return Boolean(getCustomerToken() && getStoredUser())
 }
 
+export async function signUp(payload: {
+  firstName: string
+  lastName: string
+  address: string
+  phoneNumber: string
+  email: string
+  password: string
+  passwordConfirmation: string
+  termsAccepted: boolean
+}): Promise<User> {
+  try {
+    const data = await authService.register({
+      first_name: payload.firstName.trim(),
+      last_name: payload.lastName.trim(),
+      address: payload.address.trim(),
+      phone_number: payload.phoneNumber.trim(),
+      email: payload.email.trim(),
+      password: payload.password,
+      password_confirmation: payload.passwordConfirmation,
+      terms_accepted: payload.termsAccepted,
+    })
+
+    localStorage.setItem(CUSTOMER_TOKEN_KEY, data.access_token)
+
+    const user: User = {
+      id: data.user.uuid,
+      name: `${data.user.first_name} ${data.user.last_name}`.trim(),
+      email: data.user.email,
+      initials: getInitials(`${data.user.first_name} ${data.user.last_name}`),
+      badge: 'Member',
+      levelProgress: mockUser.levelProgress,
+    }
+
+    setStoredUser(user)
+    return user
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'Sign up failed.'))
+  }
+}
+
 export async function signIn(email: string, password: string): Promise<User> {
   try {
     const data = await authService.login(email, password)

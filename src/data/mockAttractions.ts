@@ -33,6 +33,7 @@ export type Attraction = {
   description: string
   tags: string[]
   ticketTypes: TicketType[]
+  todayCutoffTime?: string | null
 }
 
 export type HeroSlide = {
