@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import type { ActivityStatus } from '@/data/mockAdminActivities'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { getApiErrorMessage } from '@/lib/api'
+import { formatCutoffTimeLabel } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import {
   adminEventService,
@@ -192,6 +193,8 @@ export function AdminActivityDetailSection({
   const [deletingBlockedDateId, setDeletingBlockedDateId] = useState<
     string | null
   >(null)
+  const [todayCutoffTime, setTodayCutoffTime] = useState('')
+  const [isSavingTodayCutoff, setIsSavingTodayCutoff] = useState(false)
   const [locations, setLocations] = useState<EventLocation[]>([])
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [editingLocation, setEditingLocation] = useState<EventLocation | null>(
@@ -232,6 +235,7 @@ export function AdminActivityDetailSection({
         ])
 
       setEvent(eventResponse.data)
+      setTodayCutoffTime(eventResponse.data.today_cutoff_time ?? '')
       setTicketsSold(ticketsSoldResponse)
       setRecentActivities(activitiesResponse.activities ?? [])
       setLocations(locationsResponse)
@@ -383,6 +387,30 @@ export function AdminActivityDetailSection({
       toast.error(getApiErrorMessage(err, 'Failed to delete blocked date.'))
     } finally {
       setDeletingBlockedDateId(null)
+    }
+  }
+
+  const handleSaveTodayCutoff = async () => {
+    setIsSavingTodayCutoff(true)
+    try {
+      const result = await adminEventService.updateTodayCutoff(
+        activityId,
+        todayCutoffTime.trim() || null,
+      )
+      const saved = result.today_cutoff_time ?? ''
+      setTodayCutoffTime(saved)
+      setEvent((current) =>
+        current ? { ...current, today_cutoff_time: saved || null } : current,
+      )
+      toast.success(
+        saved
+          ? `Today's booking cut-off set to ${formatCutoffTimeLabel(saved)}.`
+          : "Today's booking cut-off removed.",
+      )
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to save cut-off time.'))
+    } finally {
+      setIsSavingTodayCutoff(false)
     }
   }
 
@@ -637,6 +665,66 @@ export function AdminActivityDetailSection({
                     Add Date
                   </button>
                 </div>
+
+                <div className="mb-5 rounded-xl border border-violet-100 bg-violet-50/40 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">
+                        Today&apos;s booking cut-off
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        After this time, customers can no longer book visits for
+                        today on the marketplace.
+                      </p>
+                      {event.today_cutoff_time ? (
+                        <p className="mt-2 text-xs font-medium text-paec-violet">
+                          Current: {formatCutoffTimeLabel(event.today_cutoff_time)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div>
+                        <label
+                          htmlFor="today-cutoff-time"
+                          className="mb-1 block text-xs font-medium text-muted-foreground"
+                        >
+                          Cut-off time
+                        </label>
+                        <input
+                          id="today-cutoff-time"
+                          type="time"
+                          value={todayCutoffTime}
+                          onChange={(event) =>
+                            setTodayCutoffTime(event.target.value)
+                          }
+                          className="h-10 rounded-lg border border-violet-100 bg-white px-3 text-sm focus:border-paec-violet focus:ring-2 focus:ring-paec-violet/20 focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveTodayCutoff()}
+                        disabled={
+                          isSavingTodayCutoff ||
+                          todayCutoffTime === (event.today_cutoff_time ?? '')
+                        }
+                        className="inline-flex h-10 items-center rounded-lg bg-paec-violet px-4 text-xs font-semibold text-white hover:bg-paec-violet-dark disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isSavingTodayCutoff ? 'Saving…' : 'Save'}
+                      </button>
+                      {todayCutoffTime ? (
+                        <button
+                          type="button"
+                          onClick={() => setTodayCutoffTime('')}
+                          disabled={isSavingTodayCutoff}
+                          className="inline-flex h-10 items-center rounded-lg border border-violet-100 px-3 text-xs font-semibold text-muted-foreground hover:bg-white disabled:opacity-50"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
                 {blockedDatesLoading ? (
                   <p className="py-6 text-sm text-muted-foreground">
                     Loading blocked dates…

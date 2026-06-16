@@ -3,13 +3,16 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { signIn } from '@/lib/auth'
+import { signIn, signUp } from '@/lib/auth'
 import { cn } from '@/lib/utils'
+
+type AuthMode = 'signin' | 'signup'
 
 type SignInModalProps = {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
+  initialMode?: AuthMode
 }
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -46,12 +49,35 @@ function FacebookIcon({ className }: { className?: string }) {
   )
 }
 
-export function SignInModal({ open, onClose, onSuccess }: SignInModalProps) {
+const emptySignUpForm = {
+  firstName: '',
+  lastName: '',
+  address: '',
+  phoneNumber: '',
+  email: '',
+  password: '',
+  passwordConfirmation: '',
+  termsAccepted: false,
+}
+
+export function SignInModal({
+  open,
+  onClose,
+  onSuccess,
+  initialMode = 'signin',
+}: SignInModalProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [signUpForm, setSignUpForm] = useState(emptySignUpForm)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (open) setMode(initialMode)
+  }, [open, initialMode])
 
   useEffect(() => {
     if (!open) return
@@ -73,7 +99,13 @@ export function SignInModal({ open, onClose, onSuccess }: SignInModalProps) {
     toast.info(`${provider} sign-in is coming soon.`)
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode)
+    setShowPassword(false)
+    setShowConfirmPassword(false)
+  }
+
+  const handleSignIn = async (e: FormEvent) => {
     e.preventDefault()
 
     if (!email.trim() || !password.trim()) {
@@ -94,7 +126,40 @@ export function SignInModal({ open, onClose, onSuccess }: SignInModalProps) {
     }
   }
 
+  const handleSignUp = async (e: FormEvent) => {
+    e.preventDefault()
+
+    if (!signUpForm.termsAccepted) {
+      toast.error('Please agree to the terms and conditions.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await signUp({
+        firstName: signUpForm.firstName,
+        lastName: signUpForm.lastName,
+        address: signUpForm.address,
+        phoneNumber: signUpForm.phoneNumber,
+        email: signUpForm.email,
+        password: signUpForm.password,
+        passwordConfirmation: signUpForm.passwordConfirmation,
+        termsAccepted: signUpForm.termsAccepted,
+      })
+      setSignUpForm(emptySignUpForm)
+      onClose()
+      onSuccess?.()
+      toast.success('Account created successfully!')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Sign up failed.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   if (!open) return null
+
+  const isSignUp = mode === 'signup'
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -102,25 +167,28 @@ export function SignInModal({ open, onClose, onSuccess }: SignInModalProps) {
         type="button"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Close sign in modal"
+        aria-label="Close auth modal"
       />
 
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="sign-in-title"
-        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-2xl"
+        aria-labelledby="auth-modal-title"
+        className={cn(
+          'relative z-10 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-2xl',
+          isSignUp ? 'max-w-lg' : 'max-w-md',
+        )}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground"
+          className="absolute top-4 right-4 z-20 flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground"
           aria-label="Close"
         >
           <X className="size-5" />
         </button>
 
-        <div className="px-6 pt-8 pb-6 sm:px-8">
+        <div className="max-h-[90vh] overflow-y-auto px-6 pt-8 pb-6 sm:px-8">
           <div className="flex flex-col items-center">
             <img
               src="/Paec-Logo.png"
@@ -128,115 +196,294 @@ export function SignInModal({ open, onClose, onSuccess }: SignInModalProps) {
               className="h-10 w-auto object-contain"
             />
             <h2
-              id="sign-in-title"
+              id="auth-modal-title"
               className="mt-5 text-2xl font-bold text-foreground"
             >
-              Sign In
+              {isSignUp ? 'Create Account' : 'Sign In'}
             </h2>
+            <p className="mt-1 text-center text-sm text-muted-foreground">
+              {isSignUp
+                ? 'Join PAEC to book tickets and manage your experiences.'
+                : 'Welcome back to PAEC marketplace.'}
+            </p>
           </div>
 
-          <div className="mt-6 space-y-3">
-            <SocialButton
-              icon={<GoogleIcon className="size-5" />}
-              label="Sign in with Google"
-              onClick={() => handleSocialClick('Google')}
-            />
-            <SocialButton
-              icon={<FacebookIcon className="size-5" />}
-              label="Sign in with Facebook"
-              onClick={() => handleSocialClick('Facebook')}
-            />
-          </div>
+          {!isSignUp ? (
+            <>
+              <div className="mt-6 space-y-3">
+                <SocialButton
+                  icon={<GoogleIcon className="size-5" />}
+                  label="Sign in with Google"
+                  onClick={() => handleSocialClick('Google')}
+                />
+                <SocialButton
+                  icon={<FacebookIcon className="size-5" />}
+                  label="Sign in with Facebook"
+                  onClick={() => handleSocialClick('Facebook')}
+                />
+              </div>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-violet-100" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white px-3 text-xs text-muted-foreground lowercase">
-                or
-              </span>
-            </div>
-          </div>
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-violet-100" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-xs text-muted-foreground lowercase">
+                    or
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@email.com"
-              className={inputClassName}
-            />
+          {isSignUp ? (
+            <form onSubmit={handleSignUp} className="mt-6 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="First Name">
+                  <input
+                    type="text"
+                    autoComplete="given-name"
+                    value={signUpForm.firstName}
+                    onChange={(e) =>
+                      setSignUpForm((prev) => ({ ...prev, firstName: e.target.value }))
+                    }
+                    placeholder="Juan"
+                    className={inputClassName}
+                    required
+                  />
+                </Field>
+                <Field label="Last Name">
+                  <input
+                    type="text"
+                    autoComplete="family-name"
+                    value={signUpForm.lastName}
+                    onChange={(e) =>
+                      setSignUpForm((prev) => ({ ...prev, lastName: e.target.value }))
+                    }
+                    placeholder="Dela Cruz"
+                    className={inputClassName}
+                    required
+                  />
+                </Field>
+              </div>
 
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className={cn(inputClassName, 'pr-12')}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <EyeOff className="size-5" />
-                ) : (
-                  <Eye className="size-5" />
-                )}
-              </button>
-            </div>
+              <Field label="Address">
+                <input
+                  type="text"
+                  autoComplete="street-address"
+                  value={signUpForm.address}
+                  onChange={(e) =>
+                    setSignUpForm((prev) => ({ ...prev, address: e.target.value }))
+                  }
+                  placeholder="Street, city, province"
+                  className={inputClassName}
+                  required
+                />
+              </Field>
 
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <label className="flex cursor-pointer items-center gap-2 text-foreground">
+              <Field label="Mobile Number">
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  value={signUpForm.phoneNumber}
+                  onChange={(e) =>
+                    setSignUpForm((prev) => ({ ...prev, phoneNumber: e.target.value }))
+                  }
+                  placeholder="09171234567"
+                  className={inputClassName}
+                  required
+                />
+              </Field>
+
+              <Field label="Email Address">
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={signUpForm.email}
+                  onChange={(e) =>
+                    setSignUpForm((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                  placeholder="you@email.com"
+                  className={inputClassName}
+                  required
+                />
+              </Field>
+
+              <Field label="Password">
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={signUpForm.password}
+                    onChange={(e) =>
+                      setSignUpForm((prev) => ({ ...prev, password: e.target.value }))
+                    }
+                    placeholder="Min. 8 characters"
+                    className={cn(inputClassName, 'pr-12')}
+                    required
+                  />
+                  <PasswordToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((v) => !v)}
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Use 8+ characters with uppercase, number, and special character.
+                </p>
+              </Field>
+
+              <Field label="Confirm Password">
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={signUpForm.passwordConfirmation}
+                    onChange={(e) =>
+                      setSignUpForm((prev) => ({
+                        ...prev,
+                        passwordConfirmation: e.target.value,
+                      }))
+                    }
+                    placeholder="Re-enter password"
+                    className={cn(inputClassName, 'pr-12')}
+                    required
+                  />
+                  <PasswordToggle
+                    visible={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((v) => !v)}
+                  />
+                </div>
+              </Field>
+
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
                 <input
                   type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="size-4 rounded border-violet-200 text-paec-violet focus:ring-paec-violet/30"
+                  checked={signUpForm.termsAccepted}
+                  onChange={(e) =>
+                    setSignUpForm((prev) => ({
+                      ...prev,
+                      termsAccepted: e.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 size-4 rounded border-violet-200 text-paec-violet focus:ring-paec-violet/30"
+                  required
                 />
-                Remember me
+                <span>
+                  I agree to the{' '}
+                  <button
+                    type="button"
+                    className="font-medium text-paec-orange transition-colors hover:text-paec-orange-light"
+                    onClick={() => toast.info('Terms and conditions page coming soon.')}
+                  >
+                    terms and conditions
+                  </button>
+                </span>
               </label>
-              <button
-                type="button"
-                className="font-medium text-paec-orange transition-colors hover:text-paec-orange-light"
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-12 w-full rounded-xl bg-paec-violet text-sm font-bold tracking-wide uppercase hover:bg-paec-violet-dark"
               >
-                Forgot Password?
-              </button>
-            </div>
+                {isSubmitting ? 'Creating account…' : 'Sign Up'}
+              </Button>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="h-12 w-full rounded-xl bg-paec-violet text-sm font-bold tracking-wide uppercase hover:bg-paec-violet-dark"
-            >
-              {isSubmitting ? 'Signing in…' : 'Sign In'}
-            </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => switchMode('signin')}
+                className="h-12 w-full rounded-xl border-violet-200 text-sm font-bold tracking-wide text-foreground uppercase hover:bg-violet-50"
+              >
+                Back to Sign In
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com"
+                className={inputClassName}
+              />
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="h-12 w-full rounded-xl border-violet-200 text-sm font-bold tracking-wide text-foreground uppercase hover:bg-violet-50"
-            >
-              Cancel
-            </Button>
-          </form>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className={cn(inputClassName, 'pr-12')}
+                />
+                <PasswordToggle
+                  visible={showPassword}
+                  onToggle={() => setShowPassword((v) => !v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <label className="flex cursor-pointer items-center gap-2 text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="size-4 rounded border-violet-200 text-paec-violet focus:ring-paec-violet/30"
+                  />
+                  Remember me
+                </label>
+                <button
+                  type="button"
+                  className="font-medium text-paec-orange transition-colors hover:text-paec-orange-light"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-12 w-full rounded-xl bg-paec-violet text-sm font-bold tracking-wide uppercase hover:bg-paec-violet-dark"
+              >
+                {isSubmitting ? 'Signing in…' : 'Sign In'}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="h-12 w-full rounded-xl border-violet-200 text-sm font-bold tracking-wide text-foreground uppercase hover:bg-violet-50"
+              >
+                Cancel
+              </Button>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Sign up for an account{' '}
-            <button
-              type="button"
-              onClick={() => toast.info('Sign up is coming soon.')}
-              className="font-semibold text-paec-orange transition-colors hover:text-paec-orange-light"
-            >
-              Sign up
-            </button>
+            {isSignUp ? (
+              <>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => switchMode('signin')}
+                  className="font-semibold text-paec-orange transition-colors hover:text-paec-orange-light"
+                >
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                Sign up for an account{' '}
+                <button
+                  type="button"
+                  onClick={() => switchMode('signup')}
+                  className="font-semibold text-paec-orange transition-colors hover:text-paec-orange-light"
+                >
+                  Sign up
+                </button>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -249,6 +496,38 @@ const inputClassName = cn(
   'placeholder:text-muted-foreground/60',
   'focus:border-paec-violet focus:ring-2 focus:ring-paec-violet/20 focus:outline-none',
 )
+
+type FieldProps = {
+  label: string
+  children: React.ReactNode
+}
+
+function Field({ label, children }: FieldProps) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold text-foreground">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+type PasswordToggleProps = {
+  visible: boolean
+  onToggle: () => void
+}
+
+function PasswordToggle({ visible, onToggle }: PasswordToggleProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+      aria-label={visible ? 'Hide password' : 'Show password'}
+    >
+      {visible ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+    </button>
+  )
+}
 
 type SocialButtonProps = {
   icon: ReactNode

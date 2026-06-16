@@ -35,6 +35,7 @@ export type AdminEvent = {
   event_config: string
   schedule_type: string
   status: string
+  today_cutoff_time?: string | null
   track_event_meta?: boolean
   meta_pixel_id?: string | null
   meta_pixel_key?: string | null
@@ -80,6 +81,29 @@ export type RecentActivityItem = {
   type: string
   timestamp: string
   message: string
+}
+
+export type FeaturedActivityItem = {
+  uuid: string
+  slug?: string | null
+  event_name: string
+  status: string
+  city?: string | null
+  address?: string | null
+  price_start?: number | string | null
+  featured_order: number | null
+  is_featured?: boolean
+  featured_image?: EventImage | null
+  portrait_image?: EventImage | null
+}
+
+type PaginatedAdminEvents = {
+  data: FeaturedActivityItem[]
+  meta: {
+    total: number
+    current_page: number
+    last_page: number
+  }
 }
 
 export type EventTicketsSold = {
@@ -233,6 +257,56 @@ export const adminEventService = {
       data,
     )
     return response.data
+  },
+
+  async listFeaturedActivities(perPage = 100): Promise<FeaturedActivityItem[]> {
+    const { data: featuredData } = await adminApi.get<PaginatedAdminEvents>(
+      '/v1/events',
+      {
+        params: {
+          is_featured: true,
+          per_page: perPage,
+        },
+      },
+    )
+
+    let items = featuredData.data ?? []
+
+    if (items.length === 0) {
+      const { data: amusementData } = await adminApi.get<PaginatedAdminEvents>(
+        '/v1/events',
+        {
+          params: {
+            event_section_type: 'amusements',
+            status: 'published',
+            per_page: perPage,
+          },
+        },
+      )
+      items = amusementData.data ?? []
+    }
+
+    return [...items].sort(
+      (a, b) => (a.featured_order ?? 9999) - (b.featured_order ?? 9999),
+    )
+  },
+
+  async arrangeFeaturedActivities(
+    events: Array<{ uuid: string; featured_order: number }>,
+  ): Promise<void> {
+    await adminApi.patch('/v1/events/arrange-featured-events', { events })
+  },
+
+  async updateTodayCutoff(
+    uuid: string,
+    todayCutoffTime: string | null,
+  ): Promise<{ today_cutoff_time: string | null }> {
+    const { data } = await adminApi.patch<{
+      data: { today_cutoff_time: string | null }
+    }>(`/v1/events/${uuid}/today-cutoff`, {
+      today_cutoff_time: todayCutoffTime,
+    })
+    return data.data
   },
 
   async getScannedAttendees(

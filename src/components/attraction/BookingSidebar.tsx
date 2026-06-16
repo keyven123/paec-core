@@ -10,6 +10,7 @@ import { VisitDatePicker } from '@/components/ui/visit-date-picker'
 import type { Attraction, AttractionLocation } from '@/data/mockAttractions'
 import { saveCheckoutSession } from '@/lib/checkoutSession'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
+import { isVisitDateBookable } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import { blockedDateService } from '@/services/blockedDateService'
 import type { PublicPromoCode } from '@/services/promoCodeService'
@@ -115,6 +116,12 @@ export function BookingSidebar({
       toast.error('This date is not available. Please choose another visit date.')
       return
     }
+    if (!isVisitDateBookable(visitDate, attraction.todayCutoffTime)) {
+      toast.error(
+        "Today's visit date is no longer available. Please choose another date.",
+      )
+      return
+    }
 
     saveCheckoutSession({
       attractionId: attraction.id,
@@ -178,12 +185,21 @@ export function BookingSidebar({
           value={visitDate}
           onChange={setVisitDate}
           blockedDates={blockedDates}
+          todayCutoffTime={attraction.todayCutoffTime}
           onRejectedDate={(reason) => {
-            toast.error(
-              reason === 'blocked'
-                ? 'This date is not available. Please choose another visit date.'
-                : 'Past dates cannot be selected.',
-            )
+            if (reason === 'blocked') {
+              toast.error(
+                'This date is not available. Please choose another visit date.',
+              )
+              return
+            }
+            if (reason === 'cutoff') {
+              toast.error(
+                "Today's visit date is no longer available. Please choose another date.",
+              )
+              return
+            }
+            toast.error('Past dates cannot be selected.')
           }}
         />
 
