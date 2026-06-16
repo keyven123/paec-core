@@ -54,7 +54,7 @@ function withUpdatedOrder(items: FeaturedActivityItem[]): FeaturedActivityItem[]
 }
 
 function isFeaturedActivity(item: FeaturedActivityItem): boolean {
-  return item.is_featured === true || item.is_featured === 1
+  return item.is_featured === true
 }
 
 function dedupeActivitiesByUuid(
