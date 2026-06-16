@@ -8,6 +8,7 @@ import {
   LogOut,
   Tag,
   Users,
+  X,
 } from 'lucide-react'
 
 import type { AdminUser } from '@/lib/adminAuth'
@@ -16,6 +17,9 @@ import { cn } from '@/lib/utils'
 type AdminSidebarProps = {
   user: AdminUser
   onSignOut: () => void
+  onNavigate?: () => void
+  onClose?: () => void
+  className?: string
 }
 
 const navItems = [
@@ -28,19 +32,40 @@ const navItems = [
   { to: '/admin/cms', label: 'Content Management', icon: FileText },
 ] as const
 
-export function AdminSidebar({ user, onSignOut }: AdminSidebarProps) {
+export function AdminSidebar({
+  user,
+  onSignOut,
+  onNavigate,
+  onClose,
+  className,
+}: AdminSidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
-    <aside className="flex w-full shrink-0 flex-col border-r border-violet-100 bg-white lg:h-dvh lg:w-64">
-      <div className="shrink-0 border-b border-violet-50 px-5 py-4">
-        <Link to="/admin/dashboard">
+    <aside
+      className={cn(
+        'flex h-dvh w-64 shrink-0 flex-col border-r border-violet-100 bg-white',
+        className,
+      )}
+    >
+      <div className="flex shrink-0 items-center justify-between border-b border-violet-50 px-5 py-4">
+        <Link to="/admin/dashboard" onClick={onNavigate}>
           <img
             src="/Paec-Logo.png"
             alt="PAEC"
             className="h-8 w-auto object-contain"
           />
         </Link>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="size-5" />
+          </button>
+        ) : null}
       </div>
 
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
@@ -60,6 +85,7 @@ export function AdminSidebar({ user, onSignOut }: AdminSidebarProps) {
             <Link
               key={item.to}
               to={item.to}
+              onClick={onNavigate}
               className={cn(
                 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive

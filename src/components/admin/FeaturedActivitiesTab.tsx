@@ -1,7 +1,9 @@
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   ArrowUp,
+  ChevronRight,
   GripVertical,
   LayoutGrid,
   MapPin,
@@ -9,7 +11,7 @@ import {
   Star,
   Ticket,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
@@ -42,10 +44,54 @@ function getActivityLocation(activity: FeaturedActivityItem): string {
 }
 
 function withUpdatedOrder(items: FeaturedActivityItem[]): FeaturedActivityItem[] {
-  return items.map((item, index) => ({
+  const unique = dedupeActivitiesByUuid(items)
+
+  return unique.map((item, index) => ({
     ...item,
     featured_order: index,
+    is_featured: true,
   }))
+}
+
+function isFeaturedActivity(item: FeaturedActivityItem): boolean {
+  return item.is_featured === true || item.is_featured === 1
+}
+
+function dedupeActivitiesByUuid(
+  items: FeaturedActivityItem[],
+): FeaturedActivityItem[] {
+  const byUuid = new Map<string, FeaturedActivityItem>()
+
+  for (const item of items) {
+    const existing = byUuid.get(item.uuid)
+    if (!existing) {
+      byUuid.set(item.uuid, item)
+      continue
+    }
+
+    if (isFeaturedActivity(item) && !isFeaturedActivity(existing)) {
+      byUuid.set(item.uuid, item)
+    }
+  }
+
+  return Array.from(byUuid.values())
+}
+
+function buildFeaturedList(items: FeaturedActivityItem[]): FeaturedActivityItem[] {
+  return dedupeActivitiesByUuid(items)
+    .filter((item) => isFeaturedActivity(item))
+    .sort((a, b) => (a.featured_order ?? 9999) - (b.featured_order ?? 9999))
+}
+
+function buildAvailableList(
+  items: FeaturedActivityItem[],
+  featured: FeaturedActivityItem[],
+): FeaturedActivityItem[] {
+  const featuredIds = new Set(featured.map((item) => item.uuid))
+
+  return dedupeActivitiesByUuid(items)
+    .filter((item) => !featuredIds.has(item.uuid))
+    .sort((a, b) => a.event_name.localeCompare(b.event_name))
 }
 
 function getPlacementLabel(index: number): string {
@@ -58,6 +104,78 @@ function getPlacementTone(index: number): string {
   if (index === 0) return 'bg-amber-100 text-amber-700 ring-amber-200'
   if (index < MARKETPLACE_ROW_LIMIT) return 'bg-paec-violet/10 text-paec-violet ring-violet-200'
   return 'bg-slate-100 text-slate-600 ring-slate-200'
+}
+
+function featuredSignature(items: FeaturedActivityItem[]): string {
+  return items.map((item) => item.uuid).join(',')
+}
+
+type ActivityCardProps = {
+  item: FeaturedActivityItem
+  index?: number
+  showPlacement?: boolean
+  trailing?: ReactNode
+}
+
+function ActivityCard({
+  item,
+  index,
+  showPlacement = false,
+  trailing,
+}: ActivityCardProps) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-violet-100 bg-white p-3 transition-colors hover:border-violet-200 hover:shadow-sm">
+      {showPlacement && index !== undefined ? (
+        <div
+          className={cn(
+            'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1',
+            getPlacementTone(index),
+          )}
+        >
+          {index + 1}
+        </div>
+      ) : null}
+
+      <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-violet-100 bg-violet-50">
+        <ImageWithFallback
+          src={getActivityImage(item)}
+          alt={item.event_name}
+          className="size-full object-cover"
+          fallbackClassName="size-full"
+        />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {item.event_name}
+          </p>
+          {showPlacement && index !== undefined ? (
+            <span
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
+                getPlacementTone(index),
+              )}
+            >
+              {getPlacementLabel(index)}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+          <MapPin className="size-3 shrink-0 text-paec-orange" />
+          <span className="truncate">{getActivityLocation(item)}</span>
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+          <span className="font-bold text-paec-orange">
+            ₱{toPrice(item.price_start).toLocaleString()}
+          </span>
+          <span className="capitalize text-muted-foreground">{item.status}</span>
+        </div>
+      </div>
+
+      {trailing}
+    </div>
+  )
 }
 
 type MarketplacePreviewProps = {
@@ -132,7 +250,7 @@ function MarketplacePreview({ items }: MarketplacePreviewProps) {
 
           {rowItems.length === 0 ? (
             <p className="py-6 text-center text-xs text-white/50">
-              Add published activities to preview the marketplace row.
+              Move activities to the featured panel to preview the marketplace row.
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -173,41 +291,91 @@ function MarketplacePreview({ items }: MarketplacePreviewProps) {
   )
 }
 
+type DragPayload = {
+  source: 'available' | 'featured'
+  index: number
+}
+
 export function FeaturedActivitiesTab() {
-  const [items, setItems] = useState<FeaturedActivityItem[]>([])
-  const [savedItems, setSavedItems] = useState<FeaturedActivityItem[]>([])
+  const [allActivities, setAllActivities] = useState<FeaturedActivityItem[]>([])
+  const [featured, setFeatured] = useState<FeaturedActivityItem[]>([])
+  const [savedFeatured, setSavedFeatured] = useState<FeaturedActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragPayload, setDragPayload] = useState<DragPayload | null>(null)
+  const [dropTarget, setDropTarget] = useState<'available' | 'featured' | null>(null)
   const [dropIndex, setDropIndex] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
 
-  const loadFeatured = useCallback(async () => {
+  const available = useMemo(
+    () => buildAvailableList(allActivities, featured),
+    [allActivities, featured],
+  )
+
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const list = await adminEventService.listFeaturedActivities()
-      setItems(list)
-      setSavedItems(list)
+      const all = dedupeActivitiesByUuid(
+        await adminEventService.listActivitiesForFeaturing(),
+      )
+      const featuredList = buildFeaturedList(all)
+      const orderedFeatured = withUpdatedOrder(featuredList)
+
+      setAllActivities(all)
+      setFeatured(orderedFeatured)
+      setSavedFeatured(orderedFeatured)
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to load featured activities.'))
-      setItems([])
-      setSavedItems([])
+      toast.error(getApiErrorMessage(err, 'Failed to load activities.'))
+      setAllActivities([])
+      setFeatured([])
+      setSavedFeatured([])
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void loadFeatured()
-  }, [loadFeatured])
+    void loadData()
+  }, [loadData])
 
-  const isDirty = useMemo(() => {
-    if (items.length !== savedItems.length) return true
-    return items.some((item, index) => item.uuid !== savedItems[index]?.uuid)
-  }, [items, savedItems])
+  const filteredAvailable = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return available
+    return available.filter((item) =>
+      item.event_name.toLowerCase().includes(query),
+    )
+  }, [available, search])
 
-  const moveItem = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= items.length || fromIndex === toIndex) return
-    setItems((current) => {
+  const isDirty = useMemo(
+    () => featuredSignature(featured) !== featuredSignature(savedFeatured),
+    [featured, savedFeatured],
+  )
+
+  const addToFeatured = (item: FeaturedActivityItem, atIndex?: number) => {
+    setFeatured((current) => {
+      if (current.some((row) => row.uuid === item.uuid)) {
+        return current
+      }
+
+      const next = [...current]
+      const insertAt =
+        atIndex === undefined
+          ? next.length
+          : Math.max(0, Math.min(atIndex, next.length))
+      next.splice(insertAt, 0, { ...item, is_featured: true })
+      return withUpdatedOrder(next)
+    })
+  }
+
+  const removeFromFeatured = (item: FeaturedActivityItem) => {
+    setFeatured((current) =>
+      withUpdatedOrder(current.filter((row) => row.uuid !== item.uuid)),
+    )
+  }
+
+  const moveFeatured = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= featured.length || fromIndex === toIndex) return
+    setFeatured((current) => {
       const next = [...current]
       const [moved] = next.splice(fromIndex, 1)
       next.splice(toIndex, 0, moved)
@@ -215,20 +383,49 @@ export function FeaturedActivitiesTab() {
     })
   }
 
+  const clearDragState = () => {
+    setDragPayload(null)
+    setDropTarget(null)
+    setDropIndex(null)
+  }
+
+  const handleDropOnFeatured = (targetIndex: number | null) => {
+    if (!dragPayload) return
+
+    if (dragPayload.source === 'available') {
+      const item = available[dragPayload.index]
+      if (!item) return
+      addToFeatured(item, targetIndex ?? featured.length)
+    } else {
+      const insertAt = targetIndex ?? featured.length - 1
+      moveFeatured(dragPayload.index, insertAt)
+    }
+
+    clearDragState()
+  }
+
+  const handleDropOnAvailable = () => {
+    if (!dragPayload || dragPayload.source !== 'featured') return
+    const item = featured[dragPayload.index]
+    if (!item) return
+    removeFromFeatured(item)
+    clearDragState()
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
-      const payload = items.map((item, index) => ({
+      const payload = featured.map((item, index) => ({
         uuid: item.uuid,
         featured_order: index,
       }))
       await adminEventService.arrangeFeaturedActivities(payload)
-      const next = withUpdatedOrder(items)
-      setItems(next)
-      setSavedItems(next)
-      toast.success('Featured activity order saved to marketplace.')
+      const next = withUpdatedOrder(featured)
+      setFeatured(next)
+      setSavedFeatured(next)
+      toast.success('Featured activities saved to marketplace.')
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to save featured order.'))
+      toast.error(getApiErrorMessage(err, 'Failed to save featured activities.'))
     } finally {
       setSaving(false)
     }
@@ -244,12 +441,10 @@ export function FeaturedActivitiesTab() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-foreground sm:text-base">
-                Marketplace Featured Order
+                Marketplace Featured Activities
               </h2>
               <p className="mt-1 max-w-2xl text-xs text-muted-foreground sm:text-sm">
-                Reorder the activities shown in the homepage hero and Popular
-                Attractions row. Position 1 is the hero spotlight; positions 2–4
-                fill the featured cards below.
+                Drag activities to the featured panel, or use the arrow button
               </p>
             </div>
           </div>
@@ -264,21 +459,48 @@ export function FeaturedActivitiesTab() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,0.85fr)]">
         <div className="flex min-h-0 flex-col rounded-xl border border-violet-100 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-violet-100 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Sort activities</p>
-              <p className="text-[11px] text-muted-foreground">
-                Drag cards or use arrows to change order
-              </p>
+          <div className="border-b border-violet-100 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">All activities</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Drag to featured panel or drop back here to remove
+                </p>
+              </div>
+              <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-paec-violet">
+                {available.length}
+              </span>
             </div>
-            <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-paec-violet">
-              {items.length} {items.length === 1 ? 'activity' : 'activities'}
-            </span>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search activities..."
+              className="mt-3 h-9 w-full rounded-lg border border-violet-100 bg-violet-50/40 px-3 text-sm outline-none focus:border-paec-violet focus:ring-2 focus:ring-paec-violet/20"
+            />
           </div>
 
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 pb-24">
+          <div
+            className={cn(
+              'min-h-0 flex-1 space-y-2 overflow-y-auto p-4 transition-colors',
+              dropTarget === 'available' &&
+                dragPayload?.source === 'featured' &&
+                'bg-violet-50/80 ring-2 ring-inset ring-paec-violet/30',
+            )}
+            onDragOver={(e) => {
+              if (dragPayload?.source === 'featured') {
+                e.preventDefault()
+                setDropTarget('available')
+              }
+            }}
+            onDragLeave={() => setDropTarget(null)}
+            onDrop={(e) => {
+              e.preventDefault()
+              handleDropOnAvailable()
+            }}
+          >
             {loading ? (
               <div className="space-y-2">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -288,157 +510,256 @@ export function FeaturedActivitiesTab() {
                   />
                 ))}
               </div>
-            ) : items.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-4 py-12 text-center">
-                <Star className="mx-auto size-8 text-violet-300" />
-                <p className="mt-3 text-sm font-medium text-foreground">
-                  No published activities to feature
+            ) : filteredAvailable.length === 0 ? (
+              <div
+                className={cn(
+                  'rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-4 py-10 text-center',
+                  dropTarget === 'available' &&
+                    dragPayload?.source === 'featured' &&
+                    'border-paec-violet bg-violet-100/50',
+                )}
+              >
+                <p className="text-sm font-medium text-foreground">
+                  {available.length === 0
+                    ? 'All activities are featured'
+                    : 'No activities match your search'}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Publish activities from the Activities module first, then return
-                  here to set their marketplace order.
+                  {available.length === 0
+                    ? 'Drag from the featured panel to move activities back here.'
+                    : 'Try a different search term.'}
                 </p>
               </div>
             ) : (
-              items.map((item, index) => (
-                <div
-                  key={item.uuid}
-                  draggable
-                  onDragStart={() => setDragIndex(index)}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDropIndex(index)
-                  }}
-                  onDragLeave={() => setDropIndex(null)}
-                  onDrop={() => {
-                    if (dragIndex !== null) moveItem(dragIndex, index)
-                    setDragIndex(null)
-                    setDropIndex(null)
-                  }}
-                  onDragEnd={() => {
-                    setDragIndex(null)
-                    setDropIndex(null)
-                  }}
-                  className={cn(
-                    'group relative flex items-center gap-3 rounded-xl border p-3 transition-all',
-                    dragIndex === index
-                      ? 'scale-[0.99] border-paec-violet bg-violet-50 opacity-70 shadow-md'
-                      : dropIndex === index
-                        ? 'border-paec-violet bg-violet-50/80 shadow-sm'
-                        : 'border-violet-100 bg-white hover:border-violet-200 hover:shadow-sm',
-                  )}
-                >
-                  <button
-                    type="button"
-                    className="cursor-grab rounded-md p-1 text-muted-foreground transition-colors hover:bg-violet-100 hover:text-foreground active:cursor-grabbing"
-                    aria-label={`Drag ${item.event_name}`}
-                  >
-                    <GripVertical className="size-4" />
-                  </button>
+              filteredAvailable.map((item) => {
+                const sourceIndex = available.findIndex(
+                  (row) => row.uuid === item.uuid,
+                )
+                const isDragging =
+                  dragPayload?.source === 'available' &&
+                  dragPayload.index === sourceIndex
 
+                return (
                   <div
+                    key={item.uuid}
+                    draggable
+                    onDragStart={() =>
+                      setDragPayload({ source: 'available', index: sourceIndex })
+                    }
+                    onDragEnd={clearDragState}
                     className={cn(
-                      'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1',
-                      getPlacementTone(index),
+                      'cursor-grab rounded-xl active:cursor-grabbing',
+                      isDragging && 'opacity-50',
                     )}
                   >
-                    {index + 1}
-                  </div>
-
-                  <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-violet-100 bg-violet-50">
-                    <ImageWithFallback
-                      src={getActivityImage(item)}
-                      alt={item.event_name}
-                      className="size-full object-cover"
-                      fallbackClassName="size-full"
+                    <ActivityCard
+                      item={item}
+                      trailing={
+                        <div className="flex shrink-0 flex-col items-center gap-1">
+                          <GripVertical className="size-4 text-muted-foreground" />
+                          <button
+                            type="button"
+                            onClick={() => addToFeatured(item)}
+                            className="inline-flex size-9 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-paec-violet transition-colors hover:border-paec-violet hover:bg-violet-100"
+                            aria-label={`Feature ${item.event_name}`}
+                            title="Add to featured"
+                          >
+                            <ChevronRight className="size-4" />
+                          </button>
+                        </div>
+                      }
                     />
                   </div>
+                )
+              })
+            )}
+          </div>
+        </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {item.event_name}
-                      </p>
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
-                          getPlacementTone(index),
-                        )}
-                      >
-                        {getPlacementLabel(index)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <MapPin className="size-3 shrink-0 text-paec-orange" />
-                      <span className="truncate">{getActivityLocation(item)}</span>
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
-                      <span className="font-bold text-paec-orange">
-                        ₱{toPrice(item.price_start).toLocaleString()}
-                      </span>
-                      <span className="capitalize text-muted-foreground">
-                        {item.status}
-                      </span>
-                    </div>
-                  </div>
+        <div className="flex min-h-0 flex-col rounded-xl border border-violet-100 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-violet-100 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Featured on marketplace</p>
+              <p className="text-[11px] text-muted-foreground">
+                Drop activities here · drag to reorder
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+              {featured.length}
+            </span>
+          </div>
 
-                  <div className="flex shrink-0 flex-col gap-1">
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={() => moveItem(index, index - 1)}
-                      className="inline-flex size-8 items-center justify-center rounded-lg border border-violet-200 bg-white text-muted-foreground transition-colors hover:border-paec-violet hover:bg-violet-50 hover:text-paec-violet disabled:cursor-not-allowed disabled:opacity-40"
-                      aria-label={`Move ${item.event_name} up`}
-                    >
-                      <ArrowUp className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === items.length - 1}
-                      onClick={() => moveItem(index, index + 1)}
-                      className="inline-flex size-8 items-center justify-center rounded-lg border border-violet-200 bg-white text-muted-foreground transition-colors hover:border-paec-violet hover:bg-violet-50 hover:text-paec-violet disabled:cursor-not-allowed disabled:opacity-40"
-                      aria-label={`Move ${item.event_name} down`}
-                    >
-                      <ArrowDown className="size-3.5" />
-                    </button>
+          <div
+            className={cn(
+              'min-h-0 flex-1 space-y-2 overflow-y-auto p-4 transition-colors',
+              dropTarget === 'featured' &&
+                dragPayload?.source === 'available' &&
+                'bg-amber-50/60 ring-2 ring-inset ring-amber-300/50',
+            )}
+            onDragOver={(e) => {
+              if (dragPayload?.source === 'available') {
+                e.preventDefault()
+                setDropTarget('featured')
+              } else if (dragPayload?.source === 'featured') {
+                e.preventDefault()
+              }
+            }}
+            onDragLeave={() => {
+              setDropTarget(null)
+              setDropIndex(null)
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              handleDropOnFeatured(dropIndex)
+            }}
+          >
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-20 animate-pulse rounded-xl border border-violet-100 bg-violet-50/60"
+                  />
+                ))}
+              </div>
+            ) : featured.length === 0 ? (
+              <div
+                className={cn(
+                  'rounded-xl border border-dashed border-amber-200 bg-amber-50/40 px-4 py-10 text-center transition-colors',
+                  dropTarget === 'featured' &&
+                    dragPayload?.source === 'available' &&
+                    'border-amber-400 bg-amber-100/60',
+                )}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDropTarget('featured')
+                  setDropIndex(0)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  handleDropOnFeatured(0)
+                }}
+              >
+                <Star className="mx-auto size-8 text-amber-300" />
+                <p className="mt-3 text-sm font-medium text-foreground">
+                  Drop activities here to feature
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Drag from the left panel or click the arrow button.
+                </p>
+              </div>
+            ) : (
+              featured.map((item, index) => {
+                const isDragging =
+                  dragPayload?.source === 'featured' &&
+                  dragPayload.index === index
+
+                return (
+                  <div
+                    key={item.uuid}
+                    draggable
+                    onDragStart={() =>
+                      setDragPayload({ source: 'featured', index })
+                    }
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setDropIndex(index)
+                      if (dragPayload?.source === 'available') {
+                        setDropTarget('featured')
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      handleDropOnFeatured(index)
+                    }}
+                    onDragEnd={clearDragState}
+                    className={cn(
+                      'cursor-grab rounded-xl transition-all active:cursor-grabbing',
+                      isDragging && 'scale-[0.99] opacity-50',
+                      dropIndex === index &&
+                        dragPayload !== null &&
+                        'ring-2 ring-paec-violet ring-offset-2',
+                    )}
+                  >
+                  <ActivityCard
+                    item={item}
+                    index={index}
+                    showPlacement
+                    trailing={
+                      <div className="flex shrink-0 flex-col gap-1">
+                        <button
+                          type="button"
+                          className="cursor-grab rounded-md p-1 text-muted-foreground hover:bg-violet-100 active:cursor-grabbing"
+                          aria-label={`Drag ${item.event_name}`}
+                        >
+                          <GripVertical className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => moveFeatured(index, index - 1)}
+                          className="inline-flex size-8 items-center justify-center rounded-lg border border-violet-200 bg-white text-muted-foreground hover:border-paec-violet hover:text-paec-violet disabled:opacity-40"
+                          aria-label={`Move ${item.event_name} up`}
+                        >
+                          <ArrowUp className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === featured.length - 1}
+                          onClick={() => moveFeatured(index, index + 1)}
+                          className="inline-flex size-8 items-center justify-center rounded-lg border border-violet-200 bg-white text-muted-foreground hover:border-paec-violet hover:text-paec-violet disabled:opacity-40"
+                          aria-label={`Move ${item.event_name} down`}
+                        >
+                          <ArrowDown className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeFromFeatured(item)}
+                          className="inline-flex size-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                          aria-label={`Remove ${item.event_name} from featured`}
+                          title="Remove from featured"
+                        >
+                          <ArrowLeft className="size-3.5" />
+                        </button>
+                      </div>
+                    }
+                  />
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
 
         <div className="xl:sticky xl:top-4 xl:self-start">
-          <MarketplacePreview items={items} />
+          <MarketplacePreview items={featured} />
           <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-            Preview updates live as you reorder. Only the first four positions appear
-            in the Popular Attractions row on the marketplace homepage.
+            Position 1 drives the hero banner and spotlight card. The first four
+            featured activities appear in the Popular Attractions row.
           </p>
         </div>
       </div>
 
-      {items.length > 0 ? (
-        <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-violet-100 bg-white/95 px-1 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              {isDirty ? 'Unsaved order changes' : 'Order synced with marketplace'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {isDirty
-                ? 'Save to apply the new featured order on the customer site.'
-                : 'The homepage featured section matches this order.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={!isDirty || saving}
-            onClick={() => void handleSave()}
-            className="inline-flex items-center justify-center rounded-lg bg-paec-violet px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-paec-violet/20 transition-colors hover:bg-paec-violet/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Featured Order'}
-          </button>
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-violet-100 bg-white/95 px-1 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            {isDirty ? 'Unsaved featured changes' : 'Featured list synced with marketplace'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isDirty
+              ? 'Save to update the homepage hero and featured attractions row.'
+              : 'The marketplace homepage matches this featured list.'}
+          </p>
         </div>
-      ) : null}
+        <button
+          type="button"
+          disabled={!isDirty || saving}
+          onClick={() => void handleSave()}
+          className="inline-flex items-center justify-center rounded-lg bg-paec-violet px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-paec-violet/20 transition-colors hover:bg-paec-violet/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Featured Activities'}
+        </button>
+      </div>
     </div>
   )
 }

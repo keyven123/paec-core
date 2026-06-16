@@ -43,6 +43,7 @@ import { AdminUserStatsPage } from './routes/admin/AdminUserStatsPage'
 import { AdminLoginPage } from './routes/AdminLoginPage'
 import { AttractionDetailPage } from './routes/AttractionDetailPage'
 import { CheckoutPage } from './routes/CheckoutPage'
+import { FeaturedActivitiesPage } from './routes/FeaturedActivitiesPage'
 import { HomePage } from './routes/HomePage'
 import { InfoPage } from './routes/InfoPage'
 import { Toaster } from './components/ui/toast'
@@ -61,6 +62,12 @@ const attractionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/attractions/$attractionId',
   component: AttractionDetailPage,
+})
+
+const featuredRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/featured',
+  component: FeaturedActivitiesPage,
 })
 
 const infoPageRoute = createRoute({
@@ -189,6 +196,7 @@ const accountRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   attractionRoute,
+  featuredRoute,
   infoPageRoute,
   checkoutRoute,
   adminLoginRoute,
