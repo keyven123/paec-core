@@ -6,24 +6,18 @@ import {
   MapPin,
   Star,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { FeaturedAttractions } from '@/components/home/FeaturedAttractions'
+import type { FeaturedAttractionItem } from '@/components/home/FeaturedAttractionCard'
 import { Button } from '@/components/ui/button'
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import type { HeroSlide } from '@/data/mockAttractions'
 import { cn } from '@/lib/utils'
 
-type FeaturedItem = {
-  id: string
-  name: string
-  price: number
-  image: string
-}
-
 type HeroSectionProps = {
   slides: HeroSlide[]
-  featuredAttractions: FeaturedItem[]
+  featuredAttractions: FeaturedAttractionItem[]
   loading?: boolean
 }
 
@@ -34,6 +28,12 @@ export function HeroSection({
 }: HeroSectionProps) {
   const [slideIndex, setSlideIndex] = useState(0)
   const slide = slides[slideIndex] ?? slides[0]
+
+  useEffect(() => {
+    if (slideIndex >= slides.length) {
+      setSlideIndex(0)
+    }
+  }, [slideIndex, slides.length])
 
   const goTo = (index: number) => setSlideIndex(index)
   const prev = () =>

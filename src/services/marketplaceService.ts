@@ -188,14 +188,14 @@ export function mapPublicEventToAttraction(
 export function buildHeroSlides(activities: Attraction[]): HeroSlide[] {
   if (activities.length === 0) return []
 
-  return activities.slice(0, 2).map((activity, index) => {
+  return activities.map((activity, index) => {
     const words = activity.name.split(' ')
     const splitAt = Math.max(1, Math.ceil(words.length / 2))
     const title = words.slice(0, splitAt).join(' ')
     const highlight = words.slice(splitAt).join(' ') || 'Experience'
 
     return {
-      id: String(index + 1),
+      id: activity.id,
       attractionId: activity.id,
       badge: index === 0 ? 'Top Picks' : 'Featured',
       title,
@@ -235,7 +235,7 @@ export function buildTrendingEvents(activities: Attraction[]): TrendingEvent[] {
 }
 
 export const marketplaceService = {
-  async listFeaturedActivities(limit = 4): Promise<Attraction[]> {
+  async listFeaturedActivities(limit = 100): Promise<Attraction[]> {
     const { data } = await api.get<PaginatedPublicEvents>('/v1/public/events', {
       params: {
         type: 'featured',

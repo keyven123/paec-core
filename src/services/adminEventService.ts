@@ -259,6 +259,18 @@ export const adminEventService = {
     return response.data
   },
 
+  async listActivitiesForFeaturing(perPage = 200): Promise<FeaturedActivityItem[]> {
+    const { data } = await adminApi.get<PaginatedAdminEvents>('/v1/events', {
+      params: {
+        per_page: perPage,
+        sort_by: 'created_at',
+        sort: 'desc',
+      },
+    })
+
+    return data.data ?? []
+  },
+
   async listFeaturedActivities(perPage = 100): Promise<FeaturedActivityItem[]> {
     const { data: featuredData } = await adminApi.get<PaginatedAdminEvents>(
       '/v1/events',
@@ -270,21 +282,7 @@ export const adminEventService = {
       },
     )
 
-    let items = featuredData.data ?? []
-
-    if (items.length === 0) {
-      const { data: amusementData } = await adminApi.get<PaginatedAdminEvents>(
-        '/v1/events',
-        {
-          params: {
-            event_section_type: 'amusements',
-            status: 'published',
-            per_page: perPage,
-          },
-        },
-      )
-      items = amusementData.data ?? []
-    }
+    const items = featuredData.data ?? []
 
     return [...items].sort(
       (a, b) => (a.featured_order ?? 9999) - (b.featured_order ?? 9999),

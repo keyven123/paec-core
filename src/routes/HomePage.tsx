@@ -28,7 +28,7 @@ export function HomePage() {
       try {
         const [list, featured] = await Promise.all([
           marketplaceService.listActivities(),
-          marketplaceService.listFeaturedActivities(),
+          marketplaceService.listFeaturedActivities(100),
         ])
         if (!cancelled) {
           setActivities(list)
@@ -51,21 +51,26 @@ export function HomePage() {
     }
   }, [])
 
-  const heroSlides = useMemo(() => buildHeroSlides(activities), [activities])
+  const heroSlides = useMemo(() => {
+    const source =
+      featuredActivities.length > 0 ? featuredActivities : activities
+    return buildHeroSlides(source)
+  }, [featuredActivities, activities])
   const trendingEvents = useMemo(
     () => buildTrendingEvents(activities),
     [activities],
   )
   const featuredAttractions = useMemo(
     () =>
-      (featuredActivities.length > 0 ? featuredActivities : activities)
-        .slice(0, 4)
-        .map((activity) => ({
+      (featuredActivities.length > 0 ? featuredActivities : activities).map(
+        (activity) => ({
           id: activity.id,
           name: activity.name,
           price: activity.price,
           image: activity.image,
-        })),
+          location: activity.location,
+        }),
+      ),
     [featuredActivities, activities],
   )
 
