@@ -63,7 +63,7 @@ function restrictionFromApi(
 ): {
   title: string
   message: string
-  attendeeName?: string | null
+  attendeeName?: string
   visitDate?: string | null
 } {
   const attendeeName = data.meta?.attendee_name?.trim() || undefined

@@ -59,6 +59,15 @@ export type BrowseByCityLocation = {
   image?: string | null
 }
 
+type BrowseByCityLocationApi = Omit<BrowseByCityLocation, 'image'> & {
+  image?: { url?: string | null } | null
+}
+
+type BrowseByCityApiData = {
+  cities: string[]
+  locations: BrowseByCityLocationApi[]
+}
+
 export type BrowseByCityData = {
   cities: string[]
   locations: BrowseByCityLocation[]
@@ -124,9 +133,7 @@ function formatLocationSummary(locations: Attraction['locations'], fallback: str
 }
 
 function mapBrowseByCityLocation(
-  location: Omit<BrowseByCityLocation, 'image'> & {
-    image?: { url?: string | null } | null
-  },
+  location: BrowseByCityLocationApi,
 ): BrowseByCityLocation {
   return {
     uuid: location.uuid,
@@ -243,7 +250,7 @@ export const marketplaceService = {
     city?: string
     limit?: number
   }): Promise<BrowseByCityData> {
-    const { data } = await api.get<{ data: BrowseByCityData }>(
+    const { data } = await api.get<{ data: BrowseByCityApiData }>(
       '/v1/public/events/browse-by-city',
       {
         params: {
