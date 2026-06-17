@@ -20,16 +20,12 @@ import { toast } from 'sonner'
 
 import { AddUserModal } from '@/components/admin/AddUserModal'
 import { CreateRoleModal } from '@/components/admin/CreateRoleModal'
-import { RolePermissionMatrix } from '@/components/admin/RolePermissionMatrix'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
-import { type UserStatus } from '@/data/mockAdminUsers'
+import { type RoleType, type UserStatus } from '@/data/mockAdminUsers'
 import { getApiErrorMessage } from '@/lib/api'
-import { isMerchantPartnerSession } from '@/lib/adminAuth'
 import {
-  accessMapToGrants,
-  grantsToAccessMap,
+  groupPermissionsByModule,
   permissionsForPaecCatalog,
-  toggleAccessLetter,
 } from '@/lib/rolePermissionUtils'
 import { cn } from '@/lib/utils'
 import {
@@ -62,6 +58,13 @@ function countRoleModules(role: Role, catalog: PermissionCatalogItem[]): number 
       .map((item) => item.module?.trim() || 'Other Module'),
   )
   return modules.size
+}
+
+function getRolePermissionLabels(role: Role, catalog: PermissionCatalogItem[]): string[] {
+  const catalogByCode = new Map(catalog.map((item) => [item.code, item.name]))
+  return (role.permission_grants ?? [])
+    .filter((grant) => grant.available_access.length > 0)
+    .map((grant) => catalogByCode.get(grant.code) ?? grant.code)
 }
 
 function formatBirthDate(value?: string | null): string {
@@ -100,6 +103,20 @@ function StatusBadge({ status }: { status: UserStatus }) {
       )}
     >
       {status}
+    </span>
+  )
+}
+
+function RoleTypeBadge({ type }: { type: RoleType }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold capitalize',
+        type === 'admin' && 'bg-violet-100 text-paec-violet',
+        type === 'customer' && 'bg-orange-100 text-paec-orange',
+      )}
+    >
+      {type}
     </span>
   )
 }
@@ -204,8 +221,6 @@ export function AdminUserManagementSection() {
     }
   }, [debouncedSearch, activeTab])
 
-  const isMerchantPartner = isMerchantPartnerSession()
-
   const loadAdminUsers = useCallback(async () => {
     if (activeTab !== 'admin') return
 
@@ -214,7 +229,7 @@ export function AdminUserManagementSection() {
 
     try {
       const response = await userManagementService.getAdminUsers({
-        ...(isMerchantPartner ? {} : { is_admin: 0 }),
+        is_admin: 1,
         q: debouncedSearch.trim() || undefined,
         page: adminPage,
         per_page: ADMIN_USERS_PER_PAGE,
@@ -229,7 +244,7 @@ export function AdminUserManagementSection() {
     } finally {
       setAdminLoading(false)
     }
-  }, [activeTab, adminPage, debouncedSearch, isMerchantPartner])
+  }, [activeTab, adminPage, debouncedSearch])
 
   const loadRoles = useCallback(async () => {
     if (activeTab !== 'roles') return
@@ -239,7 +254,7 @@ export function AdminUserManagementSection() {
 
     try {
       const [rolesData, permissionsData] = await Promise.all([
-        roleService.getRoles(isMerchantPartner ? undefined : { is_admin: 1 }),
+        roleService.getRoles({ is_admin: 1 }),
         permissionCatalogService.getPermissions(),
       ])
       setRoles(rolesData)
@@ -250,7 +265,7 @@ export function AdminUserManagementSection() {
     } finally {
       setRolesLoading(false)
     }
-  }, [activeTab, isMerchantPartner])
+  }, [activeTab])
 
   const loadCustomers = useCallback(async () => {
     if (activeTab !== 'customer') return
@@ -291,14 +306,14 @@ export function AdminUserManagementSection() {
   const filteredRoles = useMemo(() => {
     const query = roleSearch.trim().toLowerCase()
     return roles.filter((role) => {
-      if (isMerchantPartner ? role.is_admin : !role.is_admin) return false
+      if (!role.is_admin) return false
       const matchesSearch =
         !query ||
         role.name.toLowerCase().includes(query) ||
         role.code.toLowerCase().includes(query)
       return matchesSearch
     })
-  }, [roles, roleSearch, isMerchantPartner])
+  }, [roles, roleSearch])
 
   const selectedRole = useMemo(
     () => roles.find((role) => role.uuid === selectedRoleId) ?? null,
@@ -743,7 +758,7 @@ function RolesPermissionsTab({
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row xl:items-stretch">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           <SearchBar
             value={roleSearch}
@@ -754,7 +769,7 @@ function RolesPermissionsTab({
           <UserTable minWidth="560px">
             <thead className="sticky top-0 z-10 bg-violet-50/95 backdrop-blur-sm">
               <tr className="border-b border-violet-100">
-                {['Role', 'Code', 'Type', 'Actions'].map((col) => (
+                {['Role', 'Code', 'Actions'].map((col) => (
                   <th
                     key={col}
                     className="px-3 py-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
@@ -767,17 +782,16 @@ function RolesPermissionsTab({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={3} className="px-3 py-12 text-center text-sm text-muted-foreground">
                     Loading roles...
                   </td>
                 </tr>
               ) : roles.length === 0 ? (
-                <EmptyState colSpan={4} message="No roles found" />
+                <EmptyState colSpan={3} message="No roles found" />
               ) : (
                 roles.map((role) => {
                   const isSelected = selectedRole?.uuid === role.uuid
                   const moduleCount = countRoleModules(role, permissionCatalog)
-                  const isSystemRole = !role.organization_uuid
 
                   return (
                     <tr
@@ -798,18 +812,6 @@ function RolesPermissionsTab({
                       </td>
                       <td className="px-3 py-2.5 text-xs text-muted-foreground">
                         {role.code}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={cn(
-                            'inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold',
-                            isSystemRole
-                              ? 'bg-violet-100 text-paec-violet'
-                              : 'bg-emerald-100 text-emerald-700',
-                          )}
-                        >
-                          {isSystemRole ? 'System' : 'Custom'}
-                        </span>
                       </td>
                       <td className="px-3 py-2.5">
                         <div
@@ -838,11 +840,7 @@ function RolesPermissionsTab({
           </UserTable>
         </div>
 
-        <RoleDetailPanel
-          role={selectedRole}
-          permissionCatalog={permissionCatalog}
-          onPermissionsSaved={onRolesChanged}
-        />
+        <RoleDetailPanel role={selectedRole} permissionCatalog={permissionCatalog} />
       </div>
 
       <ConfirmModal
@@ -866,60 +864,13 @@ function RolesPermissionsTab({
 function RoleDetailPanel({
   role,
   permissionCatalog,
-  onPermissionsSaved,
 }: {
   role: Role | null
   permissionCatalog: PermissionCatalogItem[]
-  onPermissionsSaved?: () => void
 }) {
-  const isMerchantPartner = isMerchantPartnerSession()
-  const [accessMap, setAccessMap] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState(false)
-
-  const editablePermissions = useMemo(
-    () => permissionsForPaecCatalog(permissionCatalog),
-    [permissionCatalog],
-  )
-
-  const canEdit = role
-    ? isMerchantPartner
-      ? Boolean(role.organization_uuid)
-      : true
-    : false
-
-  useEffect(() => {
-    if (!role) {
-      setAccessMap({})
-      return
-    }
-    setAccessMap(grantsToAccessMap(role.permission_grants ?? []))
-  }, [role])
-
-  const handleToggle = (permissionCode: string, letter: string, checked: boolean) => {
-    setAccessMap((prev) => ({
-      ...prev,
-      [permissionCode]: toggleAccessLetter(prev[permissionCode] ?? '', letter, checked),
-    }))
-  }
-
-  const handleSave = async () => {
-    if (!role || !canEdit) return
-
-    setSaving(true)
-    try {
-      await roleService.assignPermissions(role.uuid, accessMapToGrants(accessMap))
-      toast.success('Permissions saved successfully.')
-      onPermissionsSaved?.()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to save permissions.'))
-    } finally {
-      setSaving(false)
-    }
-  }
-
   if (!role) {
     return (
-      <div className="flex min-h-[320px] flex-1 items-center justify-center rounded-xl border border-violet-100 bg-white p-6 shadow-sm xl:min-w-[360px] xl:max-w-[560px]">
+      <div className="flex min-h-[240px] flex-1 items-center justify-center rounded-xl border border-violet-100 bg-white p-6 shadow-sm xl:min-w-[320px] xl:max-w-[400px]">
         <div className="text-center">
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-violet-50">
             <Shield className="size-7 text-paec-violet/40" />
@@ -933,10 +884,20 @@ function RoleDetailPanel({
   }
 
   const moduleCount = countRoleModules(role, permissionCatalog)
-  const isSystemRole = !role.organization_uuid
+  const permissionLabels = getRolePermissionLabels(role, permissionCatalog)
+  const catalogByCode = new Map(permissionCatalog.map((item) => [item.code, item]))
+  const grants = (role.permission_grants ?? []).filter(
+    (grant) => grant.available_access.length > 0,
+  )
+
+  const grouped = groupPermissionsByModule(
+    grants
+      .map((grant) => catalogByCode.get(grant.code))
+      .filter((item): item is PermissionCatalogItem => Boolean(item)),
+  )
 
   return (
-    <div className="flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm xl:min-w-[360px] xl:max-w-[560px]">
+    <div className="flex min-h-[240px] flex-1 flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm xl:min-w-[320px] xl:max-w-[400px]">
       <div className="shrink-0 border-b border-violet-100 px-4 py-3">
         <div className="flex items-start gap-2">
           <Hexagon className="mt-0.5 size-4 shrink-0 text-paec-orange" />
@@ -945,55 +906,57 @@ function RoleDetailPanel({
             <p className="text-xs text-muted-foreground">{role.code}</p>
           </div>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span
-            className={cn(
-              'inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold',
-              isSystemRole
-                ? 'bg-violet-100 text-paec-violet'
-                : 'bg-emerald-100 text-emerald-700',
-            )}
-          >
-            {isSystemRole ? 'System' : 'Custom'}
-          </span>
+        <div className="mt-2 flex items-center gap-2">
+          <RoleTypeBadge type="admin" />
           <span className="text-xs text-muted-foreground">{moduleCount} modules</span>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          {isMerchantPartner
-            ? 'Merchant partner permissions (shared modules)'
-            : 'Platform permissions (shared modules)'}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto p-4">
+        <p className="mb-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+          Permissions
         </p>
+        {grouped.length === 0 && permissionLabels.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No permissions assigned</p>
+        ) : grouped.length > 0 ? (
+          <div className="space-y-3">
+            {grouped.map(({ module, permissions }) => (
+              <div key={module}>
+                <p className="mb-1.5 text-[10px] font-bold tracking-wider text-paec-orange uppercase">
+                  {module}
+                </p>
+                <ul className="space-y-1.5">
+                  {permissions.map((permission) => (
+                    <li
+                      key={permission.uuid}
+                      className="flex items-center gap-2 rounded-lg border border-violet-50 bg-violet-50/30 px-3 py-2"
+                    >
+                      <span className="flex size-4 shrink-0 items-center justify-center rounded bg-paec-violet text-[10px] text-white">
+                        ✓
+                      </span>
+                      <span className="text-xs text-foreground">{permission.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {permissionLabels.map((permission) => (
+              <li
+                key={permission}
+                className="flex items-center gap-2 rounded-lg border border-violet-50 bg-violet-50/30 px-3 py-2"
+              >
+                <span className="flex size-4 shrink-0 items-center justify-center rounded bg-paec-violet text-[10px] text-white">
+                  ✓
+                </span>
+                <span className="text-xs text-foreground">{permission}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
-        {!canEdit ? (
-          <p className="mb-3 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            System roles cannot be edited. Create a custom role to configure permissions.
-          </p>
-        ) : null}
-
-        <RolePermissionMatrix
-          permissions={editablePermissions}
-          accessMap={accessMap}
-          onToggle={handleToggle}
-          disabled={!canEdit || saving}
-          constrainedHeight
-          className="min-h-0 flex-1"
-        />
-      </div>
-
-      {canEdit ? (
-        <div className="shrink-0 border-t border-violet-100 p-4">
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={saving || editablePermissions.length === 0}
-            className="w-full rounded-lg bg-paec-violet px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-paec-violet-dark disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Permissions'}
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }

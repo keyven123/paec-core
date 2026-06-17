@@ -1,5 +1,4 @@
 import { adminApi } from '@/lib/api'
-import { isMerchantPartnerSession } from '@/lib/adminAuth'
 
 export type PermissionGrant = {
   code: string
@@ -30,47 +29,30 @@ export type CreateRoleData = {
   permission_grants?: PermissionGrant[]
 }
 
-function rolesPath(suffix = '') {
-  const base = isMerchantPartnerSession() ? '/v1/organizer/roles' : '/v1/roles'
-  return suffix ? `${base}/${suffix}` : base
-}
-
 export const roleService = {
   async getRoles(params?: { is_admin?: number; q?: string }): Promise<Role[]> {
-    const requestParams = isMerchantPartnerSession()
-      ? { q: params?.q }
-      : params
-
-    const { data } = await adminApi.get<{ data: Role[] }>(rolesPath(), { params: requestParams })
+    const { data } = await adminApi.get<{ data: Role[] }>('/v1/roles', { params })
     return data.data ?? []
   },
 
   async getRole(uuid: string): Promise<Role> {
-    const { data } = await adminApi.get<{ data: Role }>(rolesPath(uuid))
+    const { data } = await adminApi.get<{ data: Role }>(`/v1/roles/${uuid}`)
     return data.data
   },
 
   async createRole(payload: CreateRoleData): Promise<Role> {
-    const body = isMerchantPartnerSession()
-      ? {
-          name: payload.name,
-          code: payload.code,
-          permission_grants: payload.permission_grants,
-        }
-      : payload
-
-    const { data } = await adminApi.post<{ data: Role }>(rolesPath(), body)
+    const { data } = await adminApi.post<{ data: Role }>('/v1/roles', payload)
     return data.data
   },
 
   async assignPermissions(uuid: string, permissionGrants: PermissionGrant[]): Promise<Role> {
-    const { data } = await adminApi.post<{ data: Role }>(rolesPath(`${uuid}/permissions`), {
+    const { data } = await adminApi.post<{ data: Role }>(`/v1/roles/${uuid}/permissions`, {
       permission_grants: permissionGrants,
     })
     return data.data
   },
 
   async deleteRole(uuid: string): Promise<void> {
-    await adminApi.delete(rolesPath(uuid))
+    await adminApi.delete(`/v1/roles/${uuid}`)
   },
 }

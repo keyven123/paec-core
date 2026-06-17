@@ -52,20 +52,15 @@ export function VerticalBarChart({
 
 type PieSegment = { label: string; value: number; color: string }
 
-export function PieChart({ data, size = 140 }: { data: PieSegment[]; size?: number }) {
+export function PieChart({ data, size = 160 }: { data: PieSegment[]; size?: number }) {
   const total = data.reduce((sum, item) => sum + item.value, 0) || 1
   let cumulative = 0
   const radius = 16
   const circumference = 2 * Math.PI * radius
 
   return (
-    <div className="flex min-w-0 flex-col items-center gap-3">
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 40 40"
-        className="mx-auto shrink-0 -rotate-90"
-      >
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center">
+      <svg width={size} height={size} viewBox="0 0 40 40" className="shrink-0 -rotate-90">
         <circle cx="20" cy="20" r={radius} fill="none" stroke="#f3f4f6" strokeWidth="8" />
         {data.map((segment) => {
           const portion = segment.value / total
@@ -87,22 +82,17 @@ export function PieChart({ data, size = 140 }: { data: PieSegment[]; size?: numb
           )
         })}
       </svg>
-      <ul className="flex w-full flex-wrap justify-center gap-x-4 gap-y-2">
-        {data.map((segment) => {
-          const percent = Math.round((segment.value / total) * 100)
-          return (
-            <li key={segment.label} className="flex min-w-0 items-center gap-2 text-xs">
-              <span
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: segment.color }}
-              />
-              <span className="text-foreground">{segment.label}</span>
-              <span className="font-semibold whitespace-nowrap text-muted-foreground">
-                {percent}% ({segment.value.toLocaleString()})
-              </span>
-            </li>
-          )
-        })}
+      <ul className="space-y-2">
+        {data.map((segment) => (
+          <li key={segment.label} className="flex items-center gap-2 text-xs">
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: segment.color }}
+            />
+            <span className="text-foreground">{segment.label}</span>
+            <span className="font-semibold text-muted-foreground">{segment.value}%</span>
+          </li>
+        ))}
       </ul>
     </div>
   )

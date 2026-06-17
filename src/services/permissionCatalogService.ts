@@ -1,5 +1,4 @@
 import { adminApi } from '@/lib/api'
-import { isMerchantPartnerSession } from '@/lib/adminAuth'
 
 export type PermissionCatalogItem = {
   uuid: string
@@ -17,17 +16,16 @@ export type MerchantPartnerPermissionCatalogEntry = {
 }
 
 export const permissionCatalogService = {
-  async getPermissions(params?: { role_scope?: 'admin' | 'organizer' | 'shared' }): Promise<PermissionCatalogItem[]> {
-    const path = isMerchantPartnerSession() ? '/v1/organizer/permissions' : '/v1/permissions'
-    const { data } = await adminApi.get<{ data: PermissionCatalogItem[] }>(path, {
-      params: isMerchantPartnerSession() ? undefined : { role_scope: params?.role_scope ?? 'shared' },
+  async getPermissions(params?: { role_scope?: 'admin' | 'organizer' }): Promise<PermissionCatalogItem[]> {
+    const { data } = await adminApi.get<{ data: PermissionCatalogItem[] }>('/v1/permissions', {
+      params,
     })
     return data.data ?? []
   },
 
   async getMerchantPartnerCatalog(): Promise<MerchantPartnerPermissionCatalogEntry[]> {
     const { data } = await adminApi.get<{ data: MerchantPartnerPermissionCatalogEntry[] }>(
-      '/v1/organizer/permissions/catalog',
+      '/v1/permissions/merchant-partner/catalog',
     )
     return data.data ?? []
   },

@@ -24,11 +24,11 @@ import {
 } from '@/components/admin/intelligence/SimpleCharts'
 import { getApiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import type { RevenuePerEventSeriesData } from '@/services/analyticsService'
 import {
-  organizerAnalyticsService,
-  type OrganizerAnalyticsStats,
-} from '@/services/organizerAnalyticsService'
+  analyticsService,
+  type AnalyticsStats,
+  type RevenuePerEventSeriesData,
+} from '@/services/analyticsService'
 
 const categoryCards = [
   {
@@ -51,11 +51,11 @@ const categoryCards = [
   },
 ]
 
-function buildKpiCards(stats: OrganizerAnalyticsStats | null) {
+function buildKpiCards(stats: AnalyticsStats | null) {
   return [
     {
       label: 'Total Revenue',
-      value: stats ? formatPeso(stats.transactions) : '—',
+      value: stats ? formatPeso(stats.total_revenue) : '—',
       icon: Coins,
       iconClass: 'bg-orange-100 text-paec-orange',
     },
@@ -72,8 +72,8 @@ function buildKpiCards(stats: OrganizerAnalyticsStats | null) {
       iconClass: 'bg-violet-100 text-paec-violet',
     },
     {
-      label: 'Total Orders',
-      value: stats ? String(stats.total_transactions) : '—',
+      label: 'Total Users',
+      value: stats ? String(stats.total_users) : '—',
       icon: Users,
       iconClass: 'bg-orange-100 text-paec-orange',
     },
@@ -149,12 +149,9 @@ const fieldClassName = cn(
 export function IntelligenceAnalyticsTab() {
   const [period, setPeriod] = useState('daily')
   const [dateRange, setDateRange] = useState('default')
-  const [stats, setStats] = useState<OrganizerAnalyticsStats | null>(null)
+  const [stats, setStats] = useState<AnalyticsStats | null>(null)
   const [revenueByEvent, setRevenueByEvent] = useState<{ name: string; value: number }[]>([])
   const [customerTypeBreakdown, setCustomerTypeBreakdown] = useState<
-    { label: string; value: number; color: string }[]
-  >([])
-  const [transactionOutcomeBreakdown, setTransactionOutcomeBreakdown] = useState<
     { label: string; value: number; color: string }[]
   >([])
   const [transactionRevenueSeries, setTransactionRevenueSeries] = useState<
@@ -166,6 +163,7 @@ export function IntelligenceAnalyticsTab() {
   const [error, setError] = useState<string | null>(null)
 
   const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportType, setExportType] = useState<'sales' | 'cancelled'>('sales')
   const [exportStartDate, setExportStartDate] = useState('')
   const [exportEndDate, setExportEndDate] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -190,17 +188,16 @@ export function IntelligenceAnalyticsTab() {
       setError(null)
 
       try {
-        const [statsData, salesData, revenueSeriesData, customerTypes, transactionOutcomes, revenuePerEventData] =
+        const [statsData, revenueItems, revenueSeriesData, customerTypes, revenuePerEventData] =
           await Promise.all([
-            organizerAnalyticsService.getStats(),
-            organizerAnalyticsService.getSales(),
-            organizerAnalyticsService.getTransactionRevenueSeries({
+            analyticsService.getStats(),
+            analyticsService.getRevenueByEventPie(),
+            analyticsService.getTransactionRevenueSeries({
               granularity,
               ...dateParams,
             }),
-            organizerAnalyticsService.getCustomerTypePie(),
-            organizerAnalyticsService.getSuccessfulFailedTransactionPie(),
-            organizerAnalyticsService.getRevenuePerEventSeries({
+            analyticsService.getCustomerTypePie(),
+            analyticsService.getRevenuePerEventSeries({
               granularity,
               ...dateParams,
             }),
@@ -210,9 +207,9 @@ export function IntelligenceAnalyticsTab() {
 
         setStats(statsData)
         setRevenueByEvent(
-          (salesData.top_selling_events ?? []).map((item) => ({
+          revenueItems.map((item) => ({
             name: item.event_name,
-            value: item.total_sales,
+            value: item.total_amount,
           })),
         )
         setTransactionRevenueSeries(
@@ -233,18 +230,9 @@ export function IntelligenceAnalyticsTab() {
           { label: 'New', value: customerTypes.new_customers, color: pieColors[0] },
           { label: 'Repeat', value: customerTypes.repeat_customers, color: pieColors[1] },
         ])
-        setTransactionOutcomeBreakdown([
-          { label: 'Successful', value: transactionOutcomes.successful_count, color: pieColors[2] },
-          { label: 'Failed', value: transactionOutcomes.failed_count, color: pieColors[4] },
-        ])
       } catch (err) {
         if (!cancelled) {
-          const message = getApiErrorMessage(err, 'Failed to load analytics.')
-          setError(
-            message.toLowerCase().includes('organization context')
-              ? 'Your account is not linked to an organization. Please contact an administrator or sign in with an organizer account.'
-              : message,
-          )
+          setError(getApiErrorMessage(err, 'Failed to load analytics.'))
         }
       } finally {
         if (!cancelled) {
@@ -260,10 +248,11 @@ export function IntelligenceAnalyticsTab() {
     }
   }, [granularity, dateParams])
 
-  const openExportModal = () => {
+  const openExportModal = (type: 'sales' | 'cancelled') => {
     const today = new Date()
     const start = new Date()
     start.setDate(start.getDate() - 30)
+    setExportType(type)
     setExportStartDate(start.toISOString().slice(0, 10))
     setExportEndDate(today.toISOString().slice(0, 10))
     setExportModalOpen(true)
@@ -274,12 +263,13 @@ export function IntelligenceAnalyticsTab() {
 
     setExporting(true)
     try {
-      await organizerAnalyticsService.exportTransactionRevenueSeries({
-        granularity,
-        start_date: exportStartDate,
-        end_date: exportEndDate,
-      })
-      toast.success('Transaction report exported.')
+      if (exportType === 'sales') {
+        await analyticsService.exportSalesReport(exportStartDate, exportEndDate)
+        toast.success('Sales report exported.')
+      } else {
+        await analyticsService.exportCancelledCheckouts(exportStartDate, exportEndDate)
+        toast.success('Cancelled checkouts report exported.')
+      }
       setExportModalOpen(false)
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Export failed.'))
@@ -291,25 +281,32 @@ export function IntelligenceAnalyticsTab() {
   const kpiCards = buildKpiCards(stats)
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-bold text-foreground sm:text-xl">
             Analytics Dashboard
           </h2>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Overview of your attraction performance and booking metrics
+            Comprehensive overview of platform performance and metrics
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => openExportModal()}
+            onClick={() => openExportModal('sales')}
             className="inline-flex items-center gap-1.5 rounded-lg bg-paec-violet px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-paec-violet-dark sm:text-sm"
           >
             <Download className="size-3.5" />
-            Export Transaction Report
+            Export Sales Report
+          </button>
+          <button
+            type="button"
+            onClick={() => openExportModal('cancelled')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 sm:text-sm"
+          >
+            Report Cancelled Checkouts
           </button>
           <Link
             to="/admin/dashboard"
@@ -410,8 +407,8 @@ export function IntelligenceAnalyticsTab() {
         </SummaryCard>
       </div>
 
-      <div className="space-y-3">
-        <ChartCard title="Revenue by Attraction (Top 10)" className="min-w-0">
+      <div className="grid gap-3 xl:grid-cols-3">
+        <ChartCard title="Revenue by Attraction (Top 10)" className="xl:col-span-2">
           {loading || revenueByEvent.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
               {loading ? 'Loading chart...' : 'No revenue data yet'}
@@ -421,29 +418,16 @@ export function IntelligenceAnalyticsTab() {
           )}
         </ChartCard>
 
-        <div className="grid min-w-0 gap-3 md:grid-cols-2">
-          <ChartCard title="Customer Type" className="min-w-0">
-            <p className="mb-3 text-[11px] text-muted-foreground">
-              New = 1 transaction · Repeat = 2+
-            </p>
-            {loading ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">Loading chart...</p>
-            ) : (
-              <PieChart data={customerTypeBreakdown} />
-            )}
-          </ChartCard>
-
-          <ChartCard title="Successful vs Failed" className="min-w-0">
-            <p className="mb-3 text-[11px] text-muted-foreground">
-              Successful = paid · Failed = failed or cancelled
-            </p>
-            {loading ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">Loading chart...</p>
-            ) : (
-              <PieChart data={transactionOutcomeBreakdown} />
-            )}
-          </ChartCard>
-        </div>
+        <ChartCard title="Customer Type">
+          <p className="mb-3 text-[11px] text-muted-foreground">
+            New = 1 transaction · Repeat = 2+
+          </p>
+          {loading ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">Loading chart...</p>
+          ) : (
+            <PieChart data={customerTypeBreakdown} />
+          )}
+        </ChartCard>
       </div>
 
       <ChartCard
@@ -522,7 +506,11 @@ export function IntelligenceAnalyticsTab() {
             >
               <X className="size-5" />
             </button>
-            <h3 className="text-lg font-bold text-foreground">Export Transaction Report</h3>
+            <h3 className="text-lg font-bold text-foreground">
+              {exportType === 'sales'
+                ? 'Export Sales Report'
+                : 'Export Cancelled Checkouts'}
+            </h3>
             <div className="mt-4 space-y-3">
               <div>
                 <label className="text-xs font-medium text-foreground">Start date</label>
@@ -654,7 +642,7 @@ function ChartCard({
   return (
     <div
       className={cn(
-        'min-w-0 rounded-xl border border-violet-100 bg-white p-4 shadow-sm',
+        'rounded-xl border border-violet-100 bg-white p-4 shadow-sm',
         className,
       )}
     >

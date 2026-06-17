@@ -185,6 +185,23 @@ export function mapPublicEventToAttraction(
   }
 }
 
+export function mergeCatalogActivities(
+  catalog: Attraction[],
+  featured: Attraction[],
+): Attraction[] {
+  const seen = new Set<string>()
+  const merged: Attraction[] = []
+
+  for (const activity of [...catalog, ...featured]) {
+    const key = activity.eventUuid
+    if (seen.has(key)) continue
+    seen.add(key)
+    merged.push(activity)
+  }
+
+  return merged
+}
+
 export function buildHeroSlides(activities: Attraction[]): HeroSlide[] {
   if (activities.length === 0) return []
 

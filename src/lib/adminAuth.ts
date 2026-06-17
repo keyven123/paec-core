@@ -5,7 +5,6 @@ export type AdminUser = {
   name: string
   email: string
   initials: string
-  isMerchantPartner?: boolean
 }
 
 const STORAGE_KEY = 'paec_admin'
@@ -37,10 +36,6 @@ export function isAdminAuthenticated(): boolean {
   return Boolean(getAdminToken() && getStoredAdmin())
 }
 
-export function isMerchantPartnerSession(): boolean {
-  return getStoredAdmin()?.isMerchantPartner === true
-}
-
 export async function signInAdmin(email: string, password: string): Promise<AdminUser> {
   try {
     const data = await adminAuthService.login(email, password)
@@ -50,7 +45,6 @@ export async function signInAdmin(email: string, password: string): Promise<Admi
       name: data.admin_user.full_name,
       email: data.admin_user.email,
       initials: getInitials(data.admin_user.full_name),
-      isMerchantPartner: data.is_admin === false,
     }
 
     setStoredAdmin(user)

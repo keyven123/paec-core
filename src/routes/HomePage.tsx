@@ -11,6 +11,7 @@ import type { Attraction } from '@/data/mockAttractions'
 import {
   buildHeroSlides,
   buildTrendingEvents,
+  mergeCatalogActivities,
   marketplaceService,
 } from '@/services/marketplaceService'
 
@@ -51,14 +52,19 @@ export function HomePage() {
     }
   }, [])
 
+  const catalogActivities = useMemo(
+    () => mergeCatalogActivities(activities, featuredActivities),
+    [activities, featuredActivities],
+  )
+
   const heroSlides = useMemo(() => {
     const source =
-      featuredActivities.length > 0 ? featuredActivities : activities
+      featuredActivities.length > 0 ? featuredActivities : catalogActivities
     return buildHeroSlides(source)
-  }, [featuredActivities, activities])
+  }, [featuredActivities, catalogActivities])
   const trendingEvents = useMemo(
-    () => buildTrendingEvents(activities),
-    [activities],
+    () => buildTrendingEvents(catalogActivities),
+    [catalogActivities],
   )
   const featuredAttractions = useMemo(
     () =>
@@ -91,7 +97,7 @@ export function HomePage() {
         />
         <AttractionsSection
           activeCategory={activeCategory}
-          activities={activities}
+          activities={catalogActivities}
           loading={loading}
         />
       </main>
