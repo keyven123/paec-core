@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { createPortal } from 'react-dom'
 
 import {
+  isPaecFunActivity,
   VISIT_POLICY_OPTIONS,
   type EventTicketFormState,
   type VisitPolicy,
@@ -424,7 +425,7 @@ export function AdminActivityTicketFormFields({
         ) : null}
       </div>
 
-      {event?.event_section_name === 'amusements' ? (
+      {isPaecFunActivity(event) ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <FieldLabel htmlFor={`${idPrefix}-visit-policy`} label="Visit Policy" />

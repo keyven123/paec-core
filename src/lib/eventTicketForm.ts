@@ -122,10 +122,23 @@ export function ticketToForm(
   }
 }
 
-export function shouldHideScheduleFields(event: AdminEvent | null) {
+export function isPaecFunActivity(
+  event:
+    | Pick<AdminEvent, 'event_section_name' | 'event_type' | 'is_featured'>
+    | null
+    | undefined,
+): boolean {
+  if (!event) return false
+
   return (
-    event?.event_section_name === 'amusements' || event?.event_type === 'daily'
+    event.event_section_name === 'amusements' ||
+    event.event_section_name === 'featured' ||
+    event.event_type === 'daily'
   )
+}
+
+export function shouldHideScheduleFields(event: AdminEvent | null) {
+  return isPaecFunActivity(event)
 }
 
 export function validateEventTicketForm(

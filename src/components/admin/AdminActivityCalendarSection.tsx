@@ -1,4 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
+import { isPaecFunActivity } from '@/lib/eventTicketForm'
 import {
   ChevronLeft,
   ChevronRight,
@@ -435,7 +436,7 @@ export function AdminActivityCalendarSection({
       try {
         setLoadingEvent(true)
         const response = await adminEventService.getEventDetails(activityId)
-        if (response.data.event_section_name !== 'amusements') {
+        if (!isPaecFunActivity(response.data)) {
           toast.error('Calendar is only available for amusement activities.')
           navigate({ to: '/admin/activities/$activityId', params: { activityId } })
           return

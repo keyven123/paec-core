@@ -17,6 +17,7 @@ import type { ActivityStatus } from '@/data/mockAdminActivities'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { getApiErrorMessage } from '@/lib/api'
 import { formatCutoffTimeLabel } from '@/lib/visitDate'
+import { isPaecFunActivity } from '@/lib/eventTicketForm'
 import { cn } from '@/lib/utils'
 import {
   adminEventService,
@@ -240,7 +241,7 @@ export function AdminActivityDetailSection({
       setRecentActivities(activitiesResponse.activities ?? [])
       setLocations(locationsResponse)
 
-      if (eventResponse.data.event_section_name === 'amusements') {
+      if (isPaecFunActivity(eventResponse.data)) {
         await fetchBlockedDates()
       }
     } catch (err) {
@@ -438,7 +439,7 @@ export function AdminActivityDetailSection({
     )
   }
 
-  const isAmusement = event.event_section_name === 'amusements'
+  const isPaecFun = isPaecFunActivity(event)
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -505,7 +506,7 @@ export function AdminActivityDetailSection({
             }}
             disabled={isExporting}
           />
-          {isAmusement ? (
+          {isPaecFun ? (
             <Link
               to="/admin/activities/$activityId/calendar"
               params={{ activityId }}
@@ -650,7 +651,7 @@ export function AdminActivityDetailSection({
               )}
             </section>
 
-            {isAmusement ? (
+            {isPaecFun ? (
               <section className={cardClassName}>
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <h2 className="text-base font-semibold text-foreground sm:text-lg">
