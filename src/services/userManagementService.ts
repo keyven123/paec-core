@@ -1,4 +1,5 @@
 import { adminApi } from '@/lib/api'
+import { isMerchantPartnerSession } from '@/lib/adminAuth'
 
 export type CustomerUser = {
   uuid: string
@@ -78,9 +79,19 @@ type AdminUserListResponse = {
   }
 }
 
+function customersPath(suffix = '') {
+  const base = isMerchantPartnerSession() ? '/v1/organizer/customers' : '/v1/users'
+  return suffix ? `${base}/${suffix}` : base
+}
+
+function adminUsersPath(suffix = '') {
+  const base = isMerchantPartnerSession() ? '/v1/organizer/admin-users' : '/v1/admin-users'
+  return suffix ? `${base}/${suffix}` : base
+}
+
 export const userManagementService = {
   async getCustomer(uuid: string): Promise<CustomerUser> {
-    const { data } = await adminApi.get<{ data: CustomerUser }>(`/v1/users/${uuid}`)
+    const { data } = await adminApi.get<{ data: CustomerUser }>(customersPath(uuid))
     return data.data
   },
 
@@ -90,12 +101,12 @@ export const userManagementService = {
     per_page?: number
     status?: string
   }): Promise<UserListResponse> {
-    const { data } = await adminApi.get<UserListResponse>('/v1/users', { params })
+    const { data } = await adminApi.get<UserListResponse>(customersPath(), { params })
     return data
   },
 
   async exportCustomers(): Promise<void> {
-    const response = await adminApi.get('/v1/users/export', {
+    const response = await adminApi.get(customersPath('export'), {
       responseType: 'blob',
     })
 
@@ -116,12 +127,18 @@ export const userManagementService = {
     page?: number
     per_page?: number
   }): Promise<AdminUserListResponse> {
-    const { data } = await adminApi.get<AdminUserListResponse>('/v1/admin-users', { params })
+    const requestParams = isMerchantPartnerSession()
+      ? { q: params?.q, page: params?.page, per_page: params?.per_page }
+      : params
+
+    const { data } = await adminApi.get<AdminUserListResponse>(adminUsersPath(), {
+      params: requestParams,
+    })
     return data
   },
 
   async createAdminUser(payload: CreateAdminUserData): Promise<AdminUser> {
-    const { data } = await adminApi.post<{ data: AdminUser }>('/v1/admin-users', payload)
+    const { data } = await adminApi.post<{ data: AdminUser }>(adminUsersPath(), payload)
     return data.data
   },
 }

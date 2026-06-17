@@ -1,14 +1,13 @@
-import { Info, X } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { getApiErrorMessage, getApiValidationErrors } from '@/lib/api'
+import { isMerchantPartnerSession } from '@/lib/adminAuth'
+import { RolePermissionMatrix } from '@/components/admin/RolePermissionMatrix'
 import {
-  ACCESS_ACTIONS,
   accessMapToGrants,
-  groupPermissionsByModule,
-  hasAccessLetter,
-  permissionsForPaecAdmin,
+  permissionsForPaecCatalog,
   slugifyRoleCode,
   toggleAccessLetter,
 } from '@/lib/rolePermissionUtils'
@@ -66,13 +65,8 @@ export function CreateRoleModal({
   }, [name, codeTouched])
 
   const formPermissions = useMemo(
-    () => permissionsForPaecAdmin(permissions, true),
+    () => permissionsForPaecCatalog(permissions),
     [permissions],
-  )
-
-  const moduleGroups = useMemo(
-    () => groupPermissionsByModule(formPermissions),
-    [formPermissions],
   )
 
   const handleToggle = (permissionCode: string, letter: string, checked: boolean) => {
@@ -99,7 +93,7 @@ export function CreateRoleModal({
       const created = await roleService.createRole({
         name: name.trim(),
         code: code.trim(),
-        is_admin: true,
+        is_admin: !isMerchantPartnerSession(),
         permission_grants: accessMapToGrants(accessMap),
       })
       toast.success('Role created successfully.')
@@ -195,103 +189,14 @@ export function CreateRoleModal({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-violet-100">
-            {catalogLoading ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                Loading permissions...
-              </p>
-            ) : formPermissions.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                No permissions available. Refresh the page or sign in again.
-              </p>
-            ) : (
-              <div className="max-h-[min(420px,50vh)] overflow-auto">
-                <table className="w-max min-w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 bg-violet-50/95">
-                    <tr className="border-b border-violet-100">
-                      <th className="sticky left-0 z-20 min-w-[200px] bg-violet-50/95 px-3 py-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                        Permission
-                      </th>
-                      {ACCESS_ACTIONS.map((action) => (
-                        <th
-                          key={action.letter}
-                          className="min-w-[68px] px-2 py-2 text-center text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
-                        >
-                          {action.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {moduleGroups.map(({ module, permissions: modulePermissions }) => (
-                      <Fragment key={module}>
-                        <tr className="bg-orange-50/60">
-                          <td
-                            colSpan={ACCESS_ACTIONS.length + 1}
-                            className="sticky left-0 px-3 py-1.5 text-[10px] font-bold tracking-wider text-paec-orange uppercase"
-                          >
-                            {module}
-                          </td>
-                        </tr>
-                        {modulePermissions.map((permission) => {
-                          const available = permission.available_access ?? []
-                          const currentAccess = accessMap[permission.code] ?? ''
-
-                          return (
-                            <tr
-                              key={permission.uuid}
-                              className="border-b border-violet-50 hover:bg-violet-50/30"
-                            >
-                              <td className="sticky left-0 min-w-[200px] bg-white px-3 py-2 pl-5 group-hover:bg-violet-50/30">
-                                <div className="flex items-center gap-1 text-xs font-medium text-foreground">
-                                  <span>{permission.name}</span>
-                                  {permission.description ? (
-                                    <span title={permission.description}>
-                                      <Info className="size-3 text-muted-foreground" />
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <p className="font-mono text-[10px] text-muted-foreground">
-                                  {permission.code}
-                                </p>
-                              </td>
-                              {ACCESS_ACTIONS.map((action) => {
-                                const supported = available.includes(action.letter)
-                                const checked =
-                                  supported && hasAccessLetter(currentAccess, action.letter)
-
-                                return (
-                                  <td key={action.letter} className="px-2 py-2 text-center">
-                                    {supported ? (
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        disabled={submitting}
-                                        onChange={(e) =>
-                                          handleToggle(
-                                            permission.code,
-                                            action.letter,
-                                            e.target.checked,
-                                          )
-                                        }
-                                        className="size-4 rounded border-violet-200 text-paec-violet focus:ring-paec-violet/20"
-                                      />
-                                    ) : (
-                                      <span className="text-muted-foreground/40">—</span>
-                                    )}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          )
-                        })}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <RolePermissionMatrix
+            permissions={formPermissions}
+            accessMap={accessMap}
+            onToggle={handleToggle}
+            disabled={submitting}
+            loading={catalogLoading}
+            className="border-0"
+          />
           {errors.permission_grants ? (
             <p className="text-xs text-red-600">{errors.permission_grants}</p>
           ) : null}

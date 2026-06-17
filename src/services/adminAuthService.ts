@@ -3,6 +3,7 @@ import { adminApi, ADMIN_TOKEN_KEY } from '@/lib/api'
 type AdminLoginResponse = {
   access_token: string
   token_type: string
+  is_admin?: boolean
   admin_user: {
     uuid: string
     email: string

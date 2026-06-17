@@ -1,4 +1,5 @@
 import { adminApi } from '@/lib/api'
+import { isMerchantPartnerSession } from '@/lib/adminAuth'
 
 export type UserStats = {
   total_purchase: number
@@ -43,16 +44,18 @@ export type UserTicketsResponse = {
 
 export const userStatsService = {
   async getUserStats(userUuid: string): Promise<UserStats> {
-    const { data } = await adminApi.get<{ data: UserStats }>(
-      `/v1/users/${userUuid}/stats`,
-    )
+    const path = isMerchantPartnerSession()
+      ? `/v1/organizer/customers/${userUuid}/stats`
+      : `/v1/users/${userUuid}/stats`
+    const { data } = await adminApi.get<{ data: UserStats }>(path)
     return data.data
   },
 
   async getUserRecentActivity(userUuid: string): Promise<ActivityItem[]> {
-    const { data } = await adminApi.get<{ data: ActivityItem[] }>(
-      `/v1/users/${userUuid}/recent-activity`,
-    )
+    const path = isMerchantPartnerSession()
+      ? `/v1/organizer/customers/${userUuid}/recent-activity`
+      : `/v1/users/${userUuid}/recent-activity`
+    const { data } = await adminApi.get<{ data: ActivityItem[] }>(path)
     return data.data ?? []
   },
 
@@ -60,10 +63,10 @@ export const userStatsService = {
     userUuid: string,
     params?: { page?: number; per_page?: number; status?: string; q?: string },
   ): Promise<UserTicketsResponse> {
-    const { data } = await adminApi.get<UserTicketsResponse>(
-      `/v1/users/${userUuid}/tickets`,
-      { params },
-    )
+    const path = isMerchantPartnerSession()
+      ? `/v1/organizer/customers/${userUuid}/tickets`
+      : `/v1/users/${userUuid}/tickets`
+    const { data } = await adminApi.get<UserTicketsResponse>(path, { params })
     return data
   },
 

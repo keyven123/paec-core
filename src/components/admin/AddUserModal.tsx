@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { getApiErrorMessage, getApiValidationErrors } from '@/lib/api'
+import { isMerchantPartnerSession } from '@/lib/adminAuth'
 import { cn } from '@/lib/utils'
 import { roleService, type Role } from '@/services/roleService'
 import {
@@ -50,7 +51,9 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   const loadOptions = useCallback(async () => {
     setLoadingOptions(true)
     try {
-      const rolesData = await roleService.getRoles({ is_admin: 1 })
+      const rolesData = await roleService.getRoles(
+        isMerchantPartnerSession() ? undefined : { is_admin: 1 },
+      )
       setRoles(rolesData)
     } catch {
       toast.error('Failed to load roles.')

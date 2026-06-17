@@ -60,26 +60,14 @@ export const PAEC_MERCHANT_PARTNER_PERMISSION_CODES = new Set([
 export function permissionsForPaecCatalog(
   permissions: PermissionCatalogItem[],
 ): PermissionCatalogItem[] {
-  return permissions.filter((permission) => {
-    const scope = permission.role_scope ?? 'admin'
-    if (scope === 'organizer') {
-      return PAEC_MERCHANT_PARTNER_PERMISSION_CODES.has(permission.code)
-    }
-    return PAEC_PLATFORM_ADMIN_PERMISSION_CODES.has(permission.code)
-  })
+  return permissions.filter((permission) => (permission.role_scope ?? 'admin') === 'shared')
 }
 
 export function permissionsForPaecAdmin(
   permissions: PermissionCatalogItem[],
-  isAdmin: boolean,
+  _isAdmin: boolean,
 ): PermissionCatalogItem[] {
-  const allowed = isAdmin
-    ? PAEC_PLATFORM_ADMIN_PERMISSION_CODES
-    : PAEC_MERCHANT_PARTNER_PERMISSION_CODES
-
-  return permissionsForRoleType(permissions, isAdmin).filter((permission) =>
-    allowed.has(permission.code),
-  )
+  return permissionsForPaecCatalog(permissions)
 }
 
 export function permissionsForRoleType(
