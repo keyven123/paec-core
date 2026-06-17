@@ -15,14 +15,14 @@ import {
 import { getApiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
-  platformPnLService,
-  type PlatformPnLData,
-  type PlatformPnLIncomeStatementRow,
-} from '@/services/platformPnLService'
+  organizerAccountingService,
+  type OrganizerPnLData,
+  type OrganizerPnLIncomeStatementRow,
+} from '@/services/organizerAccountingService'
 
 const financeSubTabs: { id: FinanceSubTab; label: string }[] = [
-  { id: 'platform', label: 'Platform P&L' },
-  { id: 'operator', label: 'Operator Console' },
+  { id: 'platform', label: 'Merchant P&L' },
+  { id: 'operator', label: 'Remittances' },
   { id: 'transaction', label: 'Transaction P&L' },
 ]
 
@@ -45,12 +45,37 @@ export function IntelligenceFinanceTab() {
   const [referenceDate, setReferenceDate] = useState(
     () => new Date().toISOString().slice(0, 10),
   )
-  const [pnl, setPnl] = useState<PlatformPnLData | null>(null)
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+  const [pnl, setPnl] = useState<OrganizerPnLData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const customRangeInvalid =
+    period === 'custom' &&
+    Boolean(customStartDate && customEndDate && customStartDate > customEndDate)
+
+  const handlePeriodChange = (next: FinancePeriod) => {
+    setPeriod(next)
+    if (next === 'custom') {
+      const end = new Date()
+      const start = new Date()
+      start.setDate(start.getDate() - 30)
+      setCustomEndDate(end.toISOString().slice(0, 10))
+      setCustomStartDate(start.toISOString().slice(0, 10))
+    }
+  }
+
   useEffect(() => {
     if (subTab !== 'platform') return
+
+    if (period === 'custom') {
+      if (!customStartDate || !customEndDate || customStartDate > customEndDate) {
+        setLoading(false)
+        setError(null)
+        return
+      }
+    }
 
     let cancelled = false
 
@@ -59,17 +84,25 @@ export function IntelligenceFinanceTab() {
       setError(null)
 
       try {
-        const data = await platformPnLService.getPlatformPnL({
-          period,
-          as_of: referenceDate,
-        })
+        const data = await organizerAccountingService.getPnL(
+          period === 'custom'
+            ? {
+                period,
+                custom_start: customStartDate,
+                custom_end: customEndDate,
+              }
+            : {
+                period,
+                as_of: referenceDate,
+              },
+        )
 
         if (!cancelled) {
           setPnl(data)
         }
       } catch (err) {
         if (!cancelled) {
-          setError(getApiErrorMessage(err, 'Failed to load platform P&L.'))
+          setError(getApiErrorMessage(err, 'Failed to load merchant P&L.'))
         }
       } finally {
         if (!cancelled) {
@@ -83,14 +116,14 @@ export function IntelligenceFinanceTab() {
     return () => {
       cancelled = true
     }
-  }, [subTab, period, referenceDate])
+  }, [subTab, period, referenceDate, customStartDate, customEndDate])
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-foreground sm:text-xl">Finance</h2>
         <p className="text-xs text-muted-foreground sm:text-sm">
-          Platform P&L, operator console, and transaction profitability
+          Merchant revenue, remittances, and payout overview for your organization
         </p>
       </div>
 
@@ -126,7 +159,7 @@ export function IntelligenceFinanceTab() {
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setPeriod(option.id)}
+                  onClick={() => handlePeriodChange(option.id)}
                   className={cn(
                     'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm',
                     period === option.id
@@ -139,25 +172,55 @@ export function IntelligenceFinanceTab() {
               ))}
             </div>
 
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Reference date
-                </span>
-                <div className="relative">
-                  <Calendar className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            {period === 'custom' ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground">Start date</span>
                   <input
                     type="date"
-                    value={referenceDate}
-                    onChange={(e) => setReferenceDate(e.target.value)}
-                    className={cn(inputClassName, 'pl-8')}
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className={inputClassName}
                   />
-                </div>
-              </label>
-              <p className="max-w-xs text-[10px] text-muted-foreground">
-                Date anchors the selected period for all metrics below.
-              </p>
-            </div>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground">End date</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className={inputClassName}
+                  />
+                </label>
+                {customRangeInvalid ? (
+                  <p className="text-xs text-red-600">Start date must be on or before end date.</p>
+                ) : (
+                  <p className="max-w-xs text-[10px] text-muted-foreground sm:pb-2">
+                    Metrics reflect paid transactions within this date range.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <label className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Reference date
+                  </span>
+                  <div className="relative">
+                    <Calendar className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="date"
+                      value={referenceDate}
+                      onChange={(e) => setReferenceDate(e.target.value)}
+                      className={cn(inputClassName, 'pl-8')}
+                    />
+                  </div>
+                </label>
+                <p className="max-w-xs text-[10px] text-muted-foreground">
+                  Date anchors the selected period for all metrics below.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -171,33 +234,32 @@ export function IntelligenceFinanceTab() {
               change={pnl?.kpi.mom_gross_sales_gmv_pct}
             />
             <KpiCard
-              label="Net Revenue (Fee + Markup)"
+              label="Net Merchant Revenue"
               value={
                 loading
                   ? '…'
-                  : formatPeso(pnl?.kpi.net_revenue_commission ?? 0)
+                  : formatPeso(pnl?.kpi.net_merchant_revenue ?? 0)
               }
-              change={pnl?.kpi.mom_net_revenue_commission_pct}
+              change={pnl?.kpi.mom_net_merchant_revenue_pct}
             />
             <KpiCard
-              label="Tax and Fees"
-              value={loading ? '…' : formatPeso(pnl?.kpi.tax_and_fees ?? 0)}
-              change={pnl?.kpi.mom_tax_and_fees_pct}
+              label="Platform Commission"
+              value={loading ? '…' : formatPeso(pnl?.kpi.platform_commission ?? 0)}
+              change={pnl?.kpi.mom_platform_commission_pct}
             />
             <KpiCard
-              label="Effective Take Rate"
+              label="Effective Commission Rate"
               value={
                 loading
                   ? '…'
-                  : `${(pnl?.kpi.effective_take_rate_on_gmv_pct ?? 0).toFixed(2)}%`
+                  : `${(pnl?.kpi.effective_commission_on_gmv_pct ?? 0).toFixed(2)}%`
               }
-              subtext="Platform fee + markup on net GMV"
+              subtext="Platform fee on gross GMV"
             />
             <KpiCard
-              label="Contribution Margin"
-              value={loading ? '…' : formatPeso(pnl?.kpi.contribution_margin ?? 0)}
-              change={pnl?.kpi.mom_contribution_margin_pct}
-              subtext={`${(pnl?.kpi.contribution_margin_pct_of_revenue ?? 0).toFixed(1)}% of commission`}
+              label="Available for Payout"
+              value={loading ? '…' : formatPeso(pnl?.kpi.available_for_payout ?? 0)}
+              subtext={`Pending remittance: ${formatPeso(pnl?.kpi.pending_remittance ?? 0)}`}
               subtextClass="text-emerald-600"
             />
           </div>
@@ -212,7 +274,7 @@ export function IntelligenceFinanceTab() {
         </>
       )}
 
-      {subTab === 'operator' && <FinancePlaceholder title="Operator Console" />}
+      {subTab === 'operator' && <FinancePlaceholder title="Remittances" />}
       {subTab === 'transaction' && <FinancePlaceholder title="Transaction P&L" />}
     </div>
   )
@@ -257,7 +319,7 @@ function IncomeStatementSection({
   ytdLabel,
 }: {
   loading: boolean
-  rows: PlatformPnLIncomeStatementRow[]
+  rows: OrganizerPnLIncomeStatementRow[]
   currentLabel: string
   previousLabel: string
   ytdLabel: string
@@ -337,7 +399,7 @@ function IncomeStatementSection({
   )
 }
 
-function IncomeStatementTableRow({ row }: { row: PlatformPnLIncomeStatementRow }) {
+function IncomeStatementTableRow({ row }: { row: OrganizerPnLIncomeStatementRow }) {
   const formatCell = (value: number | null, isPercent = false) => {
     if (value === null) return '—'
     if (isPercent) return `${value.toFixed(2)}%`
@@ -392,7 +454,7 @@ function FinancePlaceholder({ title }: { title: string }) {
     <div className="flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed border-violet-200 bg-violet-50/30 px-6 py-12 text-center">
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Detailed views coming soon. Use Platform P&L for financial overview.
+        Detailed views coming soon. Use Merchant P&L for your financial overview.
       </p>
     </div>
   )
