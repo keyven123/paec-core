@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react'
 
 import { BookingSidebar } from '@/components/attraction/BookingSidebar'
+import { ActivityShowcaseGallery } from '@/components/attraction/ActivityShowcaseGallery'
 import { RelatedAttractions } from '@/components/attraction/RelatedAttractions'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
@@ -184,6 +185,11 @@ export function AttractionDetailPage() {
                 ({attraction.reviewCount}+ reviews)
               </span>
             </div>
+
+            <ActivityShowcaseGallery
+              images={attraction.showcaseImages ?? []}
+              activityName={attraction.name}
+            />
 
             <section className="mt-8">
               <h2 className="text-xl font-bold text-foreground">

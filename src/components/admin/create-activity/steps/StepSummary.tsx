@@ -4,6 +4,7 @@ import { useEffect, useMemo, type ReactNode } from 'react'
 import type { CreateActivityForm } from '@/types/createActivity'
 import type { EditActivityForm } from '@/types/editActivity'
 
+import { ImagePreviewFrame } from '../ImagePreviewFrame'
 import { sectionClassName } from '../formStyles'
 
 type StepSummaryProps = {
@@ -71,21 +72,19 @@ function ReviewImage({
   label,
   src,
   fileName,
+  variant,
 }: {
   label: string
   src: string | null
   fileName?: string
+  variant: 'portrait' | 'landscape'
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-[11px] text-muted-foreground">{label}</p>
       {src ? (
         <>
-          <img
-            src={src}
-            alt={label}
-            className="h-28 w-full rounded-lg border border-violet-100 object-cover"
-          />
+          <ImagePreviewFrame src={src} alt={label} variant={variant} />
           {fileName ? (
             <p className="truncate text-[11px] text-muted-foreground">
               {fileName}
@@ -135,17 +134,17 @@ function ReviewShowcaseImages({
   }
 
   return (
-    <div className="sm:col-span-3">
+    <div>
       <p className="mb-2 text-[11px] text-muted-foreground">
         Showcase ({totalCount})
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {allPreviews.map((src, index) => (
-          <img
+          <ImagePreviewFrame
             key={`${src}-${index}`}
             src={src}
             alt={`Showcase ${index + 1}`}
-            className="h-24 w-full rounded-lg border border-violet-100 object-cover"
+            variant="gallery"
           />
         ))}
       </div>
@@ -196,17 +195,21 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
         </ReviewBlock>
 
         <ReviewBlock title="Images" step={2} onEdit={onEditStep}>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <ReviewImage
-              label="Portrait"
-              src={portraitSrc}
-              fileName={form.portraitImage?.name}
-            />
-            <ReviewImage
-              label="Featured"
-              src={featuredSrc}
-              fileName={form.featuredImage?.name}
-            />
+          <div className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ReviewImage
+                label="Portrait"
+                src={portraitSrc}
+                fileName={form.portraitImage?.name}
+                variant="portrait"
+              />
+              <ReviewImage
+                label="Featured"
+                src={featuredSrc}
+                fileName={form.featuredImage?.name}
+                variant="landscape"
+              />
+            </div>
             <ReviewShowcaseImages
               newFiles={form.showcaseImages}
               existingUrls={existingShowcaseUrls}

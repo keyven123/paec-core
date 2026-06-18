@@ -104,6 +104,16 @@ function getEventImage(event: PublicEvent): string {
   return ''
 }
 
+function mapShowcaseImages(event: PublicEvent, heroImage: string): string[] {
+  const images = (event.event_showcase ?? [])
+    .map((image) => resolveImageUrl(image.url))
+    .filter((url): url is string => Boolean(url))
+
+  if (!heroImage) return images
+
+  return images.filter((url) => url !== heroImage)
+}
+
 function formatScheduleLabel(_event: PublicEvent): string {
   return 'Open Daily'
 }
@@ -158,6 +168,7 @@ export function mapPublicEventToAttraction(
     event.category_name ?? event.category?.name ?? 'Activity'
   const locations = mapEventLocations(event)
   const fallbackLocation = event.city || event.address || 'Philippines'
+  const heroImage = getEventImage(event)
 
   return {
     id: event.slug ?? event.uuid,
@@ -168,7 +179,8 @@ export function mapPublicEventToAttraction(
     category: categoryName,
     categoryLabel: categoryName.toUpperCase(),
     price: toNumber(event.price_start),
-    image: getEventImage(event),
+    image: heroImage,
+    showcaseImages: mapShowcaseImages(event, heroImage),
     featured: event.event_section_name === 'featured',
     hours: formatScheduleLabel(event),
     intensity: 'All ages',

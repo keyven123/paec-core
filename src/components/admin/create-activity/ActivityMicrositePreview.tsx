@@ -14,9 +14,11 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
+import { ActivityShowcaseGallery } from '@/components/attraction/ActivityShowcaseGallery'
 import type { CreateActivityForm, CreateActivityTicket } from '@/types/createActivity'
 import type { EditActivityForm } from '@/types/editActivity'
 import { cn } from '@/lib/utils'
+import { resolveImageUrl } from '@/lib/imageUtils'
 
 type ActivityMicrositePreviewProps = {
   form: CreateActivityForm | EditActivityForm
@@ -64,16 +66,47 @@ export function ActivityMicrositePreview({ form }: ActivityMicrositePreviewProps
 
   const featuredUrl = useObjectUrl(form.featuredImage)
   const portraitUrl = useObjectUrl(form.portraitImage)
-  const showcaseUrl = useObjectUrl(form.showcaseImages[0] ?? null)
+  const showcaseObjectUrls = useMemo(
+    () => form.showcaseImages.map((file) => URL.createObjectURL(file)),
+    [form.showcaseImages],
+  )
+
+  useEffect(
+    () => () => {
+      showcaseObjectUrls.forEach((url) => URL.revokeObjectURL(url))
+    },
+    [showcaseObjectUrls],
+  )
 
   const heroSrc =
     featuredUrl ??
     portraitUrl ??
-    showcaseUrl ??
+    showcaseObjectUrls[0] ??
     editForm.existingFeaturedImage?.url ??
     editForm.existingPortraitImage?.url ??
     editForm.existingShowcaseImages?.[0]?.url ??
     null
+
+  const showcasePreviewImages = useMemo(() => {
+    const fromFiles = showcaseObjectUrls
+      .map((url) => resolveImageUrl(url))
+      .filter(Boolean)
+    const fromExisting = (editForm.existingShowcaseImages ?? [])
+      .map((image) => resolveImageUrl(image.url))
+      .filter(Boolean)
+
+    const combined =
+      fromFiles.length > 0 ? fromFiles : fromExisting
+
+    if (!heroSrc) return combined
+
+    const resolvedHero = resolveImageUrl(heroSrc)
+    return combined.filter((url) => url !== resolvedHero)
+  }, [
+    showcaseObjectUrls,
+    editForm.existingShowcaseImages,
+    heroSrc,
+  ])
 
   const previewTickets = useMemo(
     () =>
@@ -216,6 +249,12 @@ export function ActivityMicrositePreview({ form }: ActivityMicrositePreviewProps
               <span className="text-xs font-semibold text-foreground">4.8</span>
               <span className="text-xs text-muted-foreground">(Preview)</span>
             </div>
+
+            <ActivityShowcaseGallery
+              images={showcasePreviewImages}
+              activityName={name}
+              className="mt-4"
+            />
 
             <section className="mt-5">
               <h2 className="text-base font-bold text-foreground">

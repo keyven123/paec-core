@@ -24,6 +24,7 @@ export type Attraction = {
   price: number
   originalPrice?: number
   image: string
+  showcaseImages?: string[]
   promo?: boolean
   featured?: boolean
   hours: string
