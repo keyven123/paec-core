@@ -1,7 +1,7 @@
+import { API_BASE_URL } from '@/lib/api'
+
 function getServerRoot(): string {
-  const baseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
-  return baseUrl.replace(/\/api(\/v\d+)?\/?$/, '')
+  return API_BASE_URL.replace(/\/api(\/v\d+)?\/?$/, '')
 }
 
 function fixDoubledUrl(url: string): string {

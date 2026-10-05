@@ -151,6 +151,10 @@ export const activityService = {
     await adminApi.patch(`/v1/events/${uuid}/publish`)
   },
 
+  async unpublish(uuid: string): Promise<void> {
+    await adminApi.patch(`/v1/events/${uuid}/unpublish`)
+  },
+
   async delete(uuid: string): Promise<void> {
     await adminApi.delete(`/v1/events/${uuid}`)
   },

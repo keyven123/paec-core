@@ -19,6 +19,11 @@ import { activityService } from '@/services/activityService'
 
 type StatusFilter = 'all' | ActivityStatus
 
+type PendingAction = {
+  id: string
+  type: 'publish' | 'unpublish' | 'delete'
+}
+
 const statusOptions: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All Status' },
   { value: 'published', label: 'Published' },
@@ -87,10 +92,7 @@ export function AdminActivitiesSection() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [pendingAction, setPendingAction] = useState<{
-    id: string
-    type: 'publish' | 'delete'
-  } | null>(null)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminActivity | null>(null)
 
   const loadActivities = useCallback(async () => {
@@ -144,6 +146,36 @@ export function AdminActivitiesSection() {
         toast.success(`"${activity.title}" has been published.`)
       } catch (err) {
         toast.error(getApiErrorMessage(err, 'Failed to publish activity.'))
+      } finally {
+        setPendingAction(null)
+      }
+    },
+    [],
+  )
+
+  const handleUnpublish = useCallback(
+    async (activity: AdminActivity) => {
+      setPendingAction({ id: activity.id, type: 'unpublish' })
+
+      try {
+        await activityService.unpublish(activity.id)
+        setActivities((current) =>
+          current.map((item) =>
+            item.id === activity.id
+              ? { ...item, status: 'pending' as const }
+              : item,
+          ),
+        )
+        const funStats = await activityService.getFunStats()
+        setStats({
+          published: funStats.total_published,
+          pending: funStats.total_pending,
+          revenue: funStats.total_transaction_amount,
+          ticketsSold: funStats.total_tickets_sold,
+        })
+        toast.success(`"${activity.title}" has been unpublished.`)
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, 'Failed to unpublish activity.'))
       } finally {
         setPendingAction(null)
       }
@@ -326,6 +358,7 @@ export function AdminActivitiesSection() {
                     activity={activity}
                     pendingAction={pendingAction}
                     onPublish={handlePublish}
+                    onUnpublish={handleUnpublish}
                     onDelete={handleDeleteRequest}
                   />
                 ))
@@ -363,8 +396,9 @@ export function AdminActivitiesSection() {
 
 type ActivityRowProps = {
   activity: AdminActivity
-  pendingAction: { id: string; type: 'publish' | 'delete' } | null
+  pendingAction: PendingAction | null
   onPublish: (activity: AdminActivity) => void
+  onUnpublish: (activity: AdminActivity) => void
   onDelete: (activity: AdminActivity) => void
 }
 
@@ -372,13 +406,16 @@ function ActivityRow({
   activity,
   pendingAction,
   onPublish,
+  onUnpublish,
   onDelete,
 }: ActivityRowProps) {
   const isPublishing =
     pendingAction?.id === activity.id && pendingAction.type === 'publish'
+  const isUnpublishing =
+    pendingAction?.id === activity.id && pendingAction.type === 'unpublish'
   const isDeleting =
     pendingAction?.id === activity.id && pendingAction.type === 'delete'
-  const isBusy = isPublishing || isDeleting
+  const isBusy = isPublishing || isUnpublishing || isDeleting
 
   return (
     <tr className="border-b border-violet-50 transition-colors last:border-0 hover:bg-violet-50/30">
@@ -418,7 +455,16 @@ function ActivityRow({
             >
               {isPublishing ? 'Publishing…' : 'Publish'}
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => onUnpublish(activity)}
+              className={actionButtonClassName('unpublish')}
+            >
+              {isUnpublishing ? 'Unpublishing…' : 'Unpublish'}
+            </button>
+          )}
           <button
             type="button"
             disabled={isBusy}
@@ -433,13 +479,17 @@ function ActivityRow({
   )
 }
 
-function actionButtonClassName(variant: 'view' | 'publish' | 'delete') {
+function actionButtonClassName(
+  variant: 'view' | 'publish' | 'unpublish' | 'delete',
+) {
   return cn(
     'rounded-md border bg-white px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     variant === 'view' &&
       'border-violet-200 text-paec-violet hover:border-paec-violet hover:bg-violet-50',
     variant === 'publish' &&
       'border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50',
+    variant === 'unpublish' &&
+      'border-amber-200 text-amber-700 hover:border-amber-500 hover:bg-amber-50',
     variant === 'delete' &&
       'border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50',
   )

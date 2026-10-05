@@ -2,7 +2,35 @@ import axios from 'axios'
 
 import { isTokenValid } from '@/lib/tokenUtils'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+/**
+ * Resolve API base URL for local (relative / Vite proxy) and Vercel → Hostinger.
+ * Services call `/v1/...`, so the base must end at `/api`. If the env is only the
+ * Hostinger origin (or mistakenly includes /api/v1), normalize it to `<origin>/api`.
+ */
+function resolveApiBaseUrl(raw: string | undefined): string {
+  const value = (raw || '/api').trim().replace(/\/+$/, '')
+
+  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+    const path = value.startsWith('/') ? value : `/${value}`
+    return path.replace(/\/v\d+$/, '') || '/api'
+  }
+
+  try {
+    const url = new URL(value)
+    const path = url.pathname.replace(/\/+$/, '').replace(/\/v\d+$/, '')
+
+    url.pathname = path.endsWith('/api') ? path : `${path}/api`
+    url.search = ''
+    url.hash = ''
+    return `${url.origin}${url.pathname}`
+  } catch {
+    return '/api'
+  }
+}
+
+export const API_BASE_URL = resolveApiBaseUrl(
+  import.meta.env.VITE_API_BASE_URL as string | undefined,
+)
 
 export const CUSTOMER_TOKEN_KEY = 'paec_token'
 export const ADMIN_TOKEN_KEY = 'paec_admin_token'

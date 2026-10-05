@@ -10,6 +10,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  // Local only: must match Laravel APP_URL (php artisan serve).
+  const apiOrigin =
+    env.VITE_APP_URL || env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+
+  const proxy = {
+    // Browser: http://localhost:3000/api/* → Laravel APP_URL /api/*
+    '/api': {
+      target: apiOrigin,
+      changeOrigin: true,
+    },
+    '/storage': {
+      target: apiOrigin,
+      changeOrigin: true,
+    },
+  }
 
   return {
     plugins: [
@@ -33,6 +48,14 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+    },
+    server: {
+      port: 3000,
+      proxy,
+    },
+    preview: {
+      port: 3000,
+      proxy,
     },
   }
 })
