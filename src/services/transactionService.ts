@@ -136,10 +136,10 @@ export const transactionService = {
     return response
   },
 
-  /** Dev-only: skip payment gateway (requires APP_DEBUG on API). */
-  async checkoutBypass(data: CheckoutFreePayload): Promise<CheckoutResponse> {
+  /** Confirms the order and issues tickets without a payment step. */
+  async placeOrder(data: CheckoutFreePayload): Promise<CheckoutResponse> {
     const { data: response } = await api.post<CheckoutResponse>(
-      '/v1/customer/temp-transactions/checkout-bypass',
+      '/v1/customer/temp-transactions/place-order',
       data,
     )
     return response
@@ -155,18 +155,10 @@ export const transactionService = {
     return response
   },
 
-  async guestCheckoutFree(data: GuestCheckoutPayload): Promise<CheckoutResponse> {
+  /** Confirms a guest order and issues tickets without a payment step. */
+  async guestPlaceOrder(data: GuestCheckoutPayload): Promise<CheckoutResponse> {
     const { data: response } = await api.post<CheckoutResponse>(
-      '/v1/public/temp-transactions/guest/checkout-free',
-      data,
-    )
-    return response
-  },
-
-  /** Dev-only: skip payment gateway (requires APP_DEBUG on API). */
-  async guestCheckoutBypass(data: GuestCheckoutPayload): Promise<CheckoutResponse> {
-    const { data: response } = await api.post<CheckoutResponse>(
-      '/v1/public/temp-transactions/guest/checkout-bypass',
+      '/v1/public/temp-transactions/guest/place-order',
       data,
     )
     return response

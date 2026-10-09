@@ -77,7 +77,7 @@ export function CheckoutPage() {
     return true
   }
 
-  const handleBypassPay = async () => {
+  const handlePay = async () => {
     if (!session) return
     if (!validateBeforeCheckout()) return
 
@@ -99,15 +99,10 @@ export function CheckoutPage() {
 
       if (isLoggedIn) {
         const temp = await transactionService.createTempTransaction(cart)
-        const payload = { temp_transaction_uuid: temp.uuid }
-        if (Number.parseFloat(temp.total_amount) <= 0) {
-          await transactionService.checkoutFree(payload)
-        } else {
-          await transactionService.checkoutBypass(payload)
-        }
+        await transactionService.placeOrder({ temp_transaction_uuid: temp.uuid })
 
         clearCheckoutSession()
-        toast.success('Payment complete! Your tickets are ready.')
+        toast.success('Booking confirmed! Your tickets are ready.')
         void navigate({
           to: '/account',
           search: { section: 'tickets' },
@@ -126,18 +121,17 @@ export function CheckoutPage() {
           phone_number: guest.mobileNumber.trim(),
         },
       })
-      const payload = { temp_transaction_uuid: temp.uuid, email }
-      const result =
-        Number.parseFloat(temp.total_amount) <= 0
-          ? await transactionService.guestCheckoutFree(payload)
-          : await transactionService.guestCheckoutBypass(payload)
+      const result = await transactionService.guestPlaceOrder({
+        temp_transaction_uuid: temp.uuid,
+        email,
+      })
 
       clearCheckoutSession()
       const orderNumber = result.transaction?.order_number
       toast.success(
         orderNumber
-          ? `Payment complete! Order ${orderNumber} is confirmed for ${email}.`
-          : `Payment complete! Your order is confirmed for ${email}.`,
+          ? `Booking confirmed! Order ${orderNumber} is confirmed for ${email}.`
+          : `Booking confirmed! Your order is confirmed for ${email}.`,
         { duration: 8000 },
       )
       void navigate({ to: '/' })
@@ -244,30 +238,22 @@ export function CheckoutPage() {
                   Payment
                 </h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Secure payment options will appear here
+                  Confirm your booking to receive your tickets
                 </p>
               </div>
               <div className="p-5">
                 <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-4 py-6 text-center">
                   <ShieldCheck className="mx-auto size-8 text-paec-violet/50" />
                   <p className="mt-3 text-sm font-medium text-foreground">
-                    Payment methods coming soon
+                    No online payment needed for now
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    GCash, card, and other options will be available in the next step
+                    Your booking is confirmed and your tickets are issued right away.
                   </p>
-
-                  <div className="mx-auto mt-5 max-w-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left">
-                    <p className="text-xs leading-relaxed text-amber-800">
-                      <span className="font-semibold">Temporary:</span> The Pay button
-                      below skips payment for testing only. It will be removed when
-                      real payment methods are integrated.
-                    </p>
-                  </div>
 
                   <Button
                     type="button"
-                    onClick={() => void handleBypassPay()}
+                    onClick={() => void handlePay()}
                     disabled={paying}
                     className={cn(
                       'mt-4 h-11 min-w-[140px] rounded-xl bg-paec-violet px-8 text-sm font-semibold hover:bg-paec-violet-dark',
