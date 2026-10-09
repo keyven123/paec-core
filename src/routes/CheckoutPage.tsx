@@ -81,17 +81,11 @@ export function CheckoutPage() {
     if (!session) return
     if (!validateBeforeCheckout()) return
 
-    if (!isLoggedIn) {
-      toast.error('Please sign in to complete your purchase')
-      setSignInOpen(true)
-      return
-    }
-
     setPaying(true)
     try {
-      const temp = await transactionService.createTempTransaction({
+      const cart = {
         event_uuid: session.eventUuid,
-        event_location_uuid: session.eventLocationUuid,
+        event_location_uuid: session.eventLocationUuid || undefined,
         tickets: [
           {
             event_ticket_uuid: session.ticketTypeId,
@@ -101,25 +95,52 @@ export function CheckoutPage() {
           },
         ],
         promo_code_uuid: session.appliedPromoCode?.uuid,
-      })
-
-      const total = Number.parseFloat(temp.total_amount)
-      if (total <= 0) {
-        await transactionService.checkoutFree({
-          temp_transaction_uuid: temp.uuid,
-        })
-      } else {
-        await transactionService.checkoutBypass({
-          temp_transaction_uuid: temp.uuid,
-        })
       }
 
-      clearCheckoutSession()
-      toast.success('Payment complete! Your tickets are ready.')
-      void navigate({
-        to: '/account',
-        search: { section: 'tickets' },
+      if (isLoggedIn) {
+        const temp = await transactionService.createTempTransaction(cart)
+        const payload = { temp_transaction_uuid: temp.uuid }
+        if (Number.parseFloat(temp.total_amount) <= 0) {
+          await transactionService.checkoutFree(payload)
+        } else {
+          await transactionService.checkoutBypass(payload)
+        }
+
+        clearCheckoutSession()
+        toast.success('Payment complete! Your tickets are ready.')
+        void navigate({
+          to: '/account',
+          search: { section: 'tickets' },
+        })
+        return
+      }
+
+      const email = guest.email.trim()
+      const temp = await transactionService.createGuestTempTransaction({
+        ...cart,
+        guest: {
+          first_name: guest.firstName.trim(),
+          last_name: guest.lastName.trim(),
+          address: guest.address.trim(),
+          email,
+          phone_number: guest.mobileNumber.trim(),
+        },
       })
+      const payload = { temp_transaction_uuid: temp.uuid, email }
+      const result =
+        Number.parseFloat(temp.total_amount) <= 0
+          ? await transactionService.guestCheckoutFree(payload)
+          : await transactionService.guestCheckoutBypass(payload)
+
+      clearCheckoutSession()
+      const orderNumber = result.transaction?.order_number
+      toast.success(
+        orderNumber
+          ? `Payment complete! Order ${orderNumber} is confirmed for ${email}.`
+          : `Payment complete! Your order is confirmed for ${email}.`,
+        { duration: 8000 },
+      )
+      void navigate({ to: '/' })
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Checkout failed. Please try again.'))
     } finally {

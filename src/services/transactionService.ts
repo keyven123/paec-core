@@ -37,8 +37,20 @@ export type CheckoutFreePayload = {
 
 export type CheckoutResponse = {
   success: boolean
-  transaction?: { uuid: string }
+  transaction?: { uuid: string; order_number?: string }
   tickets?: unknown[]
+}
+
+export type GuestCustomerDetails = {
+  first_name: string
+  last_name: string
+  address: string
+  email: string
+  phone_number: string
+}
+
+export type GuestCheckoutPayload = CheckoutFreePayload & {
+  email: string
 }
 
 export type TransactionOrder = {
@@ -128,6 +140,33 @@ export const transactionService = {
   async checkoutBypass(data: CheckoutFreePayload): Promise<CheckoutResponse> {
     const { data: response } = await api.post<CheckoutResponse>(
       '/v1/customer/temp-transactions/checkout-bypass',
+      data,
+    )
+    return response
+  },
+
+  async createGuestTempTransaction(
+    data: CreateTempTransactionData & { guest: GuestCustomerDetails },
+  ): Promise<TempTransactionResponse> {
+    const { data: response } = await api.post<TempTransactionResponse>(
+      '/v1/public/temp-transactions/guest',
+      data,
+    )
+    return response
+  },
+
+  async guestCheckoutFree(data: GuestCheckoutPayload): Promise<CheckoutResponse> {
+    const { data: response } = await api.post<CheckoutResponse>(
+      '/v1/public/temp-transactions/guest/checkout-free',
+      data,
+    )
+    return response
+  },
+
+  /** Dev-only: skip payment gateway (requires APP_DEBUG on API). */
+  async guestCheckoutBypass(data: GuestCheckoutPayload): Promise<CheckoutResponse> {
+    const { data: response } = await api.post<CheckoutResponse>(
+      '/v1/public/temp-transactions/guest/checkout-bypass',
       data,
     )
     return response
