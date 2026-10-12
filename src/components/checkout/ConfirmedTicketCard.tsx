@@ -1,4 +1,11 @@
-import { Calendar, Download, Hash, Loader2, MapPin, Receipt } from 'lucide-react'
+import {
+  Calendar,
+  Download,
+  Hash,
+  Loader2,
+  MapPin,
+  Receipt,
+} from 'lucide-react'
 import QRCode from 'react-qr-code'
 import type { ReactNode, Ref } from 'react'
 
@@ -124,6 +131,9 @@ export function ConfirmedTicketCard({
           )}
           Download Ticket
         </Button>
+        <p className="text-center text-[11px] leading-snug text-muted-foreground">
+          Saves this ticket only. Its QR code admits 1 person.
+        </p>
       </div>
     </article>
   )

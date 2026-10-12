@@ -4,6 +4,7 @@ import {
   Calendar,
   CheckCircle2,
   Download,
+  Info,
   Loader2,
   Mail,
   Receipt,
@@ -26,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { getStoredUser } from '@/lib/auth'
 import { loadOrderConfirmation } from '@/lib/orderConfirmation'
 import { downloadGroupPassPdf, downloadTicketsPdf } from '@/lib/ticketDownload'
+import { cn } from '@/lib/utils'
 
 function formatVisitDate(value: string) {
   if (!value) return 'Open date'
@@ -151,100 +153,136 @@ export function OrderSuccessPage() {
           <div className="pointer-events-none absolute -top-16 -right-16 size-64 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-24 right-24 size-48 rounded-full bg-paec-orange/20" />
 
-          <div className="relative">
-            <div className="flex size-14 items-center justify-center rounded-full bg-white shadow-lg">
-              <CheckCircle2 className="size-8 text-emerald-500" />
-            </div>
+          <div
+            className={cn(
+              'relative',
+              groupQrCode &&
+                'grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center',
+            )}
+          >
+            <div className="min-w-0">
+              <div className="flex size-14 items-center justify-center rounded-full bg-white shadow-lg">
+                <CheckCircle2 className="size-8 text-emerald-500" />
+              </div>
 
-            <p className="mt-5 text-xs font-semibold tracking-widest text-white/70 uppercase">
-              Payment successful
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
-              {firstName ? `You're all set, ${firstName}!` : "You're all set!"}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base">
-              Your booking for{' '}
-              <span className="font-semibold text-white">
-                {order.attractionName}
-              </span>{' '}
-              is confirmed.
-              {confirmation.email && (
-                <>
-                  {' '}
-                  We've emailed your tickets to{' '}
-                  <span className="font-semibold text-white">
-                    {confirmation.email}
+              <p className="mt-5 text-xs font-semibold tracking-widest text-white/70 uppercase">
+                Payment successful
+              </p>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
+                {firstName
+                  ? `You're all set, ${firstName}!`
+                  : "You're all set!"}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base">
+                Your booking for{' '}
+                <span className="font-semibold text-white">
+                  {order.attractionName}
+                </span>{' '}
+                is confirmed.
+                {confirmation.email && (
+                  <>
+                    {' '}
+                    We've emailed your tickets to{' '}
+                    <span className="font-semibold text-white">
+                      {confirmation.email}
+                    </span>
+                    .
+                  </>
+                )}
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2 text-xs font-medium">
+                {orderNumber && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+                    <Receipt className="size-3.5" />
+                    Order {orderNumber}
                   </span>
-                  .
-                </>
-              )}
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-medium">
-              {orderNumber && (
+                )}
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
-                  <Receipt className="size-3.5" />
-                  Order {orderNumber}
+                  <Ticket className="size-3.5" />
+                  {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
                 </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+                  <Calendar className="size-3.5" />
+                  {visitDateLabel}
+                </span>
+              </div>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  onClick={() =>
+                    void runDownload('all', () =>
+                      downloadTicketsPdf(
+                        downloadableTickets.map(toImageSource),
+                        groupQrCode ? toGroupPassSource(groupQrCode) : null,
+                        `Order-${orderNumber || 'tickets'}`,
+                      ),
+                    )
+                  }
+                  disabled={
+                    downloadableTickets.length === 0 || downloading !== null
+                  }
+                  className="h-12 rounded-xl bg-paec-orange px-6 text-base font-semibold shadow-lg shadow-black/10 hover:bg-paec-orange-light"
+                >
+                  {downloading === 'all' ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  {downloadableTickets.length > 1
+                    ? 'Download All Tickets'
+                    : 'Download Ticket'}
+                </Button>
+                {user ? (
+                  <Button
+                    asChild
+                    className="h-12 rounded-xl border border-white/25 bg-white/10 px-6 text-base font-semibold hover:bg-white/20"
+                  >
+                    <Link to="/account" search={{ section: 'tickets' }}>
+                      View My Tickets
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    className="h-12 rounded-xl border border-white/25 bg-white/10 px-6 text-base font-semibold hover:bg-white/20"
+                  >
+                    <Link to="/">
+                      Continue exploring
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                )}
+              </div>
+              {downloadableTickets.length > 0 && (
+                <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-white/75">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  {downloadableTickets.length > 1
+                    ? `Download All Tickets saves one PDF with ${groupQrCode ? 'your group pass and ' : ''}all ${downloadableTickets.length} tickets. To save a single ticket, use the Download Ticket button on that ticket below.`
+                    : 'Download Ticket saves your ticket as a PDF. Show its QR code at the entrance on your date of visit.'}
+                </p>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
-                <Ticket className="size-3.5" />
-                {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
-                <Calendar className="size-3.5" />
-                {visitDateLabel}
-              </span>
             </div>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Button
-                type="button"
-                onClick={() =>
-                  void runDownload('all', () =>
-                    downloadTicketsPdf(
-                      downloadableTickets.map(toImageSource),
-                      groupQrCode ? toGroupPassSource(groupQrCode) : null,
-                      `Order-${orderNumber || 'tickets'}`,
+            {groupQrCode && (
+              <OrderGroupQrCard
+                qrCode={groupQrCode}
+                ticketCount={downloadableTickets.length}
+                breakdown={ticketBreakdown}
+                qrRef={groupQrRef}
+                downloading={downloading === 'group'}
+                onDownload={() =>
+                  void runDownload('group', () =>
+                    downloadGroupPassPdf(
+                      toGroupPassSource(groupQrCode),
+                      `Group-Pass-${orderNumber || 'order'}`,
                     ),
                   )
                 }
-                disabled={
-                  downloadableTickets.length === 0 || downloading !== null
-                }
-                className="h-12 rounded-xl bg-paec-orange px-6 text-base font-semibold shadow-lg shadow-black/10 hover:bg-paec-orange-light"
-              >
-                {downloading === 'all' ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                {downloadableTickets.length > 1
-                  ? 'Download All Tickets'
-                  : 'Download Ticket'}
-              </Button>
-              {user ? (
-                <Button
-                  asChild
-                  className="h-12 rounded-xl border border-white/25 bg-white/10 px-6 text-base font-semibold hover:bg-white/20"
-                >
-                  <Link to="/account" search={{ section: 'tickets' }}>
-                    View My Tickets
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  className="h-12 rounded-xl border border-white/25 bg-white/10 px-6 text-base font-semibold hover:bg-white/20"
-                >
-                  <Link to="/">
-                    Continue exploring
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              )}
-            </div>
+              />
+            )}
           </div>
         </section>
 
@@ -256,7 +294,7 @@ export function OrderSuccessPage() {
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {groupQrCode
-                  ? 'Show the group QR code to admit everyone at once, or each ticket’s own QR code (one person per code) on your date of visit.'
+                  ? 'Show the group QR code above to admit everyone at once, or each ticket’s own QR code below (one person per code) on your date of visit.'
                   : 'Show the QR code at the entrance on your date of visit. Each QR code admits one person.'}
               </p>
             </div>
@@ -273,23 +311,6 @@ export function OrderSuccessPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {groupQrCode && (
-                  <OrderGroupQrCard
-                    qrCode={groupQrCode}
-                    ticketCount={downloadableTickets.length}
-                    breakdown={ticketBreakdown}
-                    qrRef={groupQrRef}
-                    downloading={downloading === 'group'}
-                    onDownload={() =>
-                      void runDownload('group', () =>
-                        downloadGroupPassPdf(
-                          toGroupPassSource(groupQrCode),
-                          `Group-Pass-${orderNumber || 'order'}`,
-                        ),
-                      )
-                    }
-                  />
-                )}
                 {tickets.map((ticket, index) => (
                   <ConfirmedTicketCard
                     key={ticket.uuid}

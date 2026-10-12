@@ -1,6 +1,14 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Search, Ticket } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
+import { AdminTransactionDetailModal } from '@/components/admin/AdminTransactionDetailModal'
+import {
+  formatCurrency,
+  formatDateTime,
+  formatVisitDate,
+  getVisitDate,
+  statusBadgeClass,
+} from '@/components/admin/transactionFormat'
 import {
   DateRangePicker,
   type DateRange,
@@ -23,58 +31,9 @@ const statusOptions: { value: TransactionStatus; label: string }[] = [
 
 const PER_PAGE = 15
 
-function formatCurrency(amount: number | string | null | undefined): string {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount ?? 0
-  return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-function formatDateTime(dateString: string | null | undefined): string {
-  if (!dateString) return '—'
-  return new Date(dateString).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
-
-function formatVisitDate(dateString: string | null | undefined): string {
-  if (!dateString) return '—'
-  const normalized = dateString.slice(0, 10)
-  const [year, month, day] = normalized.split('-').map(Number)
-  if (!year || !month || !day) return '—'
-
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
-function getVisitDate(tx: AdminTransaction): string | null {
-  for (const order of tx.transaction_orders ?? []) {
-    const visitDate = order.valid_until?.slice(0, 10)
-    if (visitDate) return visitDate
-  }
-  return null
-}
-
-function statusBadgeClass(status: string): string {
-  const value = status.toLowerCase()
-  if (value === 'confirmed' || value === 'paid') {
-    return 'bg-emerald-100 text-emerald-700'
-  }
-  if (value === 'pending') {
-    return 'bg-amber-100 text-amber-700'
-  }
-  if (value === 'cancelled' || value === 'failed') {
-    return 'bg-red-100 text-red-700'
-  }
-  return 'bg-violet-100 text-violet-700'
-}
-
 export function AdminTransactionsSection() {
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null)
+  const closeDetail = useCallback(() => setSelectedUuid(null), [])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [status, setStatus] = useState<TransactionStatus>('all')
@@ -209,7 +168,20 @@ export function AdminTransactionsSection() {
           ) : (
             <ul className="divide-y divide-violet-50">
               {transactions.map((tx) => (
-                <li key={tx.uuid} className="px-4 py-3.5">
+                <li
+                  key={tx.uuid}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedUuid(tx.uuid)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setSelectedUuid(tx.uuid)
+                    }
+                  }}
+                  aria-label={`View transaction ${tx.order_number}`}
+                  className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-violet-50/40 focus-visible:bg-violet-50/60 focus-visible:outline-none"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-medium text-foreground">
@@ -285,7 +257,16 @@ export function AdminTransactionsSection() {
                 transactions.map((tx) => (
                   <tr
                     key={tx.uuid}
-                    className="border-b border-violet-50 transition-colors hover:bg-violet-50/30"
+                    tabIndex={0}
+                    onClick={() => setSelectedUuid(tx.uuid)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        setSelectedUuid(tx.uuid)
+                      }
+                    }}
+                    aria-label={`View transaction ${tx.order_number}`}
+                    className="cursor-pointer border-b border-violet-50 transition-colors hover:bg-violet-50/40 focus-visible:bg-violet-50/60 focus-visible:outline-none"
                   >
                     <td className="px-4 py-3">
                       <p className="font-medium text-foreground">
@@ -359,6 +340,11 @@ export function AdminTransactionsSection() {
           </div>
         ) : null}
       </div>
+
+      <AdminTransactionDetailModal
+        transactionUuid={selectedUuid}
+        onClose={closeDetail}
+      />
     </div>
   )
 }
