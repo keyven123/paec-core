@@ -1,22 +1,32 @@
 import { Link } from '@tanstack/react-router'
 import { Info } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
+import type { User } from '@/data/mockUser'
 import { SignInModal } from '@/components/auth/SignInModal'
 import { AccountDropdown } from '@/components/layout/AccountDropdown'
 import { HeaderSearch } from '@/components/layout/HeaderSearch'
 import { MobileHeaderSearch } from '@/components/layout/MobileHeaderSearch'
+import { useHideOnScroll } from '@/components/layout/useHideOnScroll'
 import { Button } from '@/components/ui/button'
-import type { User } from '@/data/mockUser'
 import { getStoredUser } from '@/lib/auth'
+import { cn } from '@/lib/utils'
 
 export function Header() {
   const [signInOpen, setSignInOpen] = useState(false)
   const [user, setUser] = useState<User | null>(() => getStoredUser())
+  const headerRef = useRef<HTMLElement>(null)
+  const hidden = useHideOnScroll(headerRef)
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-violet-100 bg-white/95 backdrop-blur-md">
+      <header
+        ref={headerRef}
+        className={cn(
+          'sticky top-0 z-50 border-b border-violet-100 bg-white/95 backdrop-blur-md transition-transform duration-300 ease-out motion-reduce:transition-none',
+          hidden && '-translate-y-full',
+        )}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center gap-3 sm:gap-4">
             <Link to="/" className="shrink-0">
