@@ -141,8 +141,8 @@ export function AdminDashboardHome({ user }: AdminDashboardHomeProps) {
   const statCards = buildStatCards(dashboardStats, funStats)
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-paec-violet via-[#9333ea] to-paec-orange p-6 sm:p-8">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-paec-violet via-[#9333ea] to-paec-orange p-5 sm:p-8">
         <h1 className="text-xl font-bold text-white sm:text-2xl">
           Welcome back, {firstName}! 👋
         </h1>
@@ -157,25 +157,27 @@ export function AdminDashboardHome({ user }: AdminDashboardHomeProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {statCards.map((stat) => {
           const Icon = stat.icon
           return (
             <div
               key={stat.label}
-              className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm sm:p-5"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-muted-foreground sm:text-sm">
+                    {stat.label}
+                  </p>
+                  <p className="mt-1 truncate text-xl font-bold text-foreground sm:text-2xl">
                     {loading ? '…' : stat.value}
                   </p>
                 </div>
                 <div
-                  className={`flex size-10 items-center justify-center rounded-xl ${stat.iconClass}`}
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-xl sm:size-10 ${stat.iconClass}`}
                 >
-                  <Icon className="size-5" />
+                  <Icon className="size-[18px] sm:size-5" />
                 </div>
               </div>
             </div>
@@ -187,27 +189,30 @@ export function AdminDashboardHome({ user }: AdminDashboardHomeProps) {
         <p className="mb-3 text-xs font-bold tracking-widest text-muted-foreground uppercase">
           Quick Actions
         </p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Link
             to="/admin/activities/create"
-            className="flex items-center justify-center gap-2 rounded-xl bg-paec-violet px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-paec-violet-dark"
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl bg-paec-violet px-2 py-3 text-center text-xs font-semibold text-white transition-colors hover:bg-paec-violet-dark sm:flex-row sm:gap-2 sm:px-4 sm:py-3.5 sm:text-sm"
           >
-            <Plus className="size-4" />
-            Create New Attraction
+            <Plus className="size-4 shrink-0" />
+            <span className="sm:hidden">New Attraction</span>
+            <span className="hidden sm:inline">Create New Attraction</span>
           </Link>
           <Link
             to="/admin/activities"
-            className="flex items-center justify-center gap-2 rounded-xl bg-paec-orange px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-paec-orange-light"
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl bg-paec-orange px-2 py-3 text-center text-xs font-semibold text-white transition-colors hover:bg-paec-orange-light sm:flex-row sm:gap-2 sm:px-4 sm:py-3.5 sm:text-sm"
           >
-            <Calendar className="size-4" />
-            Manage Activities
+            <Calendar className="size-4 shrink-0" />
+            <span className="sm:hidden">Activities</span>
+            <span className="hidden sm:inline">Manage Activities</span>
           </Link>
           <Link
             to="/admin/intelligence"
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-paec-violet to-paec-orange px-4 py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-paec-violet to-paec-orange px-2 py-3 text-center text-xs font-semibold text-white transition-opacity hover:opacity-90 sm:flex-row sm:gap-2 sm:px-4 sm:py-3.5 sm:text-sm"
           >
-            <ArrowUpRight className="size-4" />
-            View Analytics
+            <ArrowUpRight className="size-4 shrink-0" />
+            <span className="sm:hidden">Analytics</span>
+            <span className="hidden sm:inline">View Analytics</span>
           </Link>
         </div>
       </div>

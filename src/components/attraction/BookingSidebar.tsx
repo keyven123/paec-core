@@ -1,14 +1,16 @@
 import { useNavigate } from '@tanstack/react-router'
-import { CheckCircle2, Minus, Plus, Ticket } from 'lucide-react'
+import { CheckCircle2, Ticket } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { PromoCodeBlock } from '@/components/attraction/PromoCodeBlock'
+import { TicketTypeCard } from '@/components/attraction/TicketTypeCard'
 import { Button } from '@/components/ui/button'
 import { ThemedSelect } from '@/components/ui/themed-select'
 import { VisitDatePicker } from '@/components/ui/visit-date-picker'
 import type { Attraction, AttractionLocation } from '@/data/mockAttractions'
-import { saveCheckoutSession } from '@/lib/checkoutSession'
+import { getTicketCount, saveCheckoutSession } from '@/lib/checkoutSession'
+import type { CheckoutTicketLine } from '@/lib/checkoutSession'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
 import { isVisitDateBookable } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
@@ -33,18 +35,14 @@ export function BookingSidebar({
   onLocationChange,
 }: BookingSidebarProps) {
   const navigate = useNavigate()
-  const [ticketTypeId, setTicketTypeId] = useState(
-    attraction.ticketTypes[0]?.id ?? '',
-  )
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [locationUuid, setLocationUuid] = useState(
     attraction.locations[0]?.uuid ?? '',
   )
-  const [quantity, setQuantity] = useState(1)
   const [visitDate, setVisitDate] = useState('')
   const [blockedDates, setBlockedDates] = useState<string[]>([])
-  const [appliedPromoCode, setAppliedPromoCode] = useState<PublicPromoCode | null>(
-    null,
-  )
+  const [appliedPromoCode, setAppliedPromoCode] =
+    useState<PublicPromoCode | null>(null)
 
   const selectedLocation =
     attraction.locations.find((location) => location.uuid === locationUuid) ??
@@ -55,6 +53,7 @@ export function BookingSidebar({
     setLocationUuid(defaultLocation?.uuid ?? '')
     setAppliedPromoCode(null)
     setVisitDate('')
+    setQuantities({})
   }, [attraction.eventUuid, attraction.locations])
 
   useEffect(() => {
@@ -90,18 +89,36 @@ export function BookingSidebar({
     }
   }, [attraction.eventUuid])
 
-  const selectedTicket = attraction.ticketTypes.find((t) => t.id === ticketTypeId)
-  const unitPrice = selectedTicket?.price ?? attraction.price
-  const subtotal = unitPrice * quantity
+  const ticketLines: Array<CheckoutTicketLine> = attraction.ticketTypes
+    .filter((ticket) => (quantities[ticket.id] ?? 0) > 0)
+    .map((ticket) => ({
+      ticketTypeId: ticket.id,
+      name: ticket.name,
+      unitPrice: ticket.price,
+      originalUnitPrice: ticket.originalPrice,
+      quantity: quantities[ticket.id],
+    }))
+  const ticketCount = getTicketCount({ tickets: ticketLines })
+  const subtotal = ticketLines.reduce(
+    (sum, line) => sum + line.unitPrice * line.quantity,
+    0,
+  )
   const promoDiscount = useMemo(
     () => getPromoDiscountAmount(subtotal, appliedPromoCode),
     [subtotal, appliedPromoCode],
   )
   const total = Math.max(0, subtotal - promoDiscount)
 
+  const changeQuantity = (ticketId: string, delta: number) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [ticketId]: Math.max(0, (prev[ticketId] ?? 0) + delta),
+    }))
+  }
+
   const handleGetTickets = () => {
-    if (!ticketTypeId) {
-      toast.error('Please select a ticket type')
+    if (ticketLines.length === 0) {
+      toast.error('Please add at least one ticket')
       return
     }
     if (attraction.locations.length > 0 && !locationUuid) {
@@ -113,7 +130,9 @@ export function BookingSidebar({
       return
     }
     if (blockedDates.includes(visitDate)) {
-      toast.error('This date is not available. Please choose another visit date.')
+      toast.error(
+        'This date is not available. Please choose another visit date.',
+      )
       return
     }
     if (!isVisitDateBookable(visitDate, attraction.todayCutoffTime)) {
@@ -130,10 +149,7 @@ export function BookingSidebar({
       attractionName: attraction.name,
       location: selectedLocation?.label ?? attraction.location,
       image: attraction.image,
-      ticketTypeId,
-      ticketTypeName: selectedTicket?.name ?? 'General Admission',
-      unitPrice,
-      quantity,
+      tickets: ticketLines,
       visitDate,
       subtotal,
       promoDiscount,
@@ -171,16 +187,6 @@ export function BookingSidebar({
           />
         )}
 
-        <ThemedSelect
-          label="Ticket Type"
-          value={ticketTypeId}
-          onChange={setTicketTypeId}
-          options={attraction.ticketTypes.map((ticket) => ({
-            value: ticket.id,
-            label: `${ticket.name} — ₱${ticket.price.toLocaleString()}`,
-          }))}
-        />
-
         <VisitDatePicker
           value={visitDate}
           onChange={setVisitDate}
@@ -204,28 +210,26 @@ export function BookingSidebar({
         />
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            Quantity
-          </label>
-          <div className="flex h-11 items-center justify-between rounded-xl border border-violet-100 px-3">
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="size-4" />
-            </button>
-            <span className="text-sm font-semibold">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => q + 1)}
-              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground"
-              aria-label="Increase quantity"
-            >
-              <Plus className="size-4" />
-            </button>
-          </div>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            Ticket Types
+          </p>
+          {attraction.ticketTypes.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-violet-200 bg-violet-50/50 px-4 py-3 text-sm text-muted-foreground">
+              No tickets are available for this activity yet.
+            </p>
+          ) : (
+            <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-0.5">
+              {attraction.ticketTypes.map((ticket) => (
+                <TicketTypeCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  quantity={quantities[ticket.id] ?? 0}
+                  onDecrease={() => changeQuantity(ticket.id, -1)}
+                  onIncrease={() => changeQuantity(ticket.id, 1)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <PromoCodeBlock
@@ -262,7 +266,7 @@ export function BookingSidebar({
                 ₱{total.toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">
-                {quantity} ticket{quantity !== 1 ? 's' : ''}
+                {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
               </p>
             </div>
           </div>

@@ -1,3 +1,5 @@
+import type { PaymentGatewayOption } from '@/services/paymentGatewayService'
+
 export type AttendeeField = {
   id: string
   label: string
@@ -28,6 +30,8 @@ export type CreateActivityForm = {
   showcaseImages: File[]
   tickets: CreateActivityTicket[]
   attendeeFields: AttendeeField[]
+  /** Selected gateways (at most one per provider); only their uuids are submitted. */
+  paymentGateways: Array<PaymentGatewayOption>
 }
 
 function createDefaultTicket(): CreateActivityTicket {
@@ -56,12 +60,18 @@ export const initialCreateActivityForm: CreateActivityForm = {
   showcaseImages: [],
   tickets: [createDefaultTicket()],
   attendeeFields: [],
+  paymentGateways: [],
 }
+
+/** Both activity wizards place the Payment step here, right before Summary. */
+export const PAYMENT_STEP = 4
+export const SUMMARY_STEP = 5
 
 export const createActivitySteps = [
   { id: 1, label: 'Basics', subtitle: 'Attraction details' },
   { id: 2, label: 'Images', subtitle: 'Visuals & preview' },
   { id: 3, label: 'Manage Ticket', subtitle: 'Tickets & attendee fields' },
-  { id: 4, label: 'Summary', subtitle: 'Review before publish' },
-  { id: 5, label: 'Preview', subtitle: 'Microsite preview' },
+  { id: PAYMENT_STEP, label: 'Payment', subtitle: 'Payment gateways' },
+  { id: SUMMARY_STEP, label: 'Summary', subtitle: 'Review before publish' },
+  { id: 6, label: 'Preview', subtitle: 'Microsite preview' },
 ] as const

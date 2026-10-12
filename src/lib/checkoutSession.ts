@@ -1,5 +1,13 @@
 const CHECKOUT_SESSION_KEY = 'paec_checkout_session'
 
+export type CheckoutTicketLine = {
+  ticketTypeId: string
+  name: string
+  unitPrice: number
+  originalUnitPrice?: number
+  quantity: number
+}
+
 export type CheckoutSession = {
   attractionId: string
   eventUuid: string
@@ -7,10 +15,7 @@ export type CheckoutSession = {
   attractionName: string
   location: string
   image: string
-  ticketTypeId: string
-  ticketTypeName: string
-  unitPrice: number
-  quantity: number
+  tickets: Array<CheckoutTicketLine>
   visitDate: string
   subtotal: number
   promoDiscount: number
@@ -35,10 +40,20 @@ export function loadCheckoutSession(): CheckoutSession | null {
   try {
     const raw = sessionStorage.getItem(CHECKOUT_SESSION_KEY)
     if (!raw) return null
-    return JSON.parse(raw) as CheckoutSession
+    const session = JSON.parse(raw) as Partial<CheckoutSession>
+    if (!Array.isArray(session.tickets) || session.tickets.length === 0) {
+      return null
+    }
+    return session as CheckoutSession
   } catch {
     return null
   }
+}
+
+export function getTicketCount(
+  session: Pick<CheckoutSession, 'tickets'>,
+): number {
+  return session.tickets.reduce((sum, line) => sum + line.quantity, 0)
 }
 
 export function clearCheckoutSession(): void {

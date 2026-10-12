@@ -39,6 +39,8 @@ type VisitDatePickerProps = {
   todayCutoffTime?: string | null
   minDate?: Date
   onRejectedDate?: (reason: 'blocked' | 'past' | 'cutoff') => void
+  triggerClassName?: string
+  placeholder?: string
 }
 
 function toIsoDate(date: Date) {
@@ -79,6 +81,8 @@ export function VisitDatePicker({
   todayCutoffTime,
   minDate,
   onRejectedDate,
+  triggerClassName,
+  placeholder = 'dd/mm/yyyy',
 }: VisitDatePickerProps) {
   const today = useMemo(() => getManilaTodayDate(), [])
   const todayIso = useMemo(() => getManilaTodayIso(), [])
@@ -186,17 +190,21 @@ export function VisitDatePicker({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
+      {label && (
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          {label}
+        </label>
+      )}
 
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
+        aria-label={label || 'Date of visit'}
         className={cn(
           'flex h-11 w-full items-center rounded-xl border border-violet-100 bg-white px-3 text-left text-sm transition-colors',
           'focus:border-paec-violet focus:ring-2 focus:ring-paec-violet/20 focus:outline-none',
           open && 'border-paec-violet ring-2 ring-paec-violet/20',
+          triggerClassName,
         )}
       >
         <Calendar className="mr-2 size-4 shrink-0 text-paec-violet" />
@@ -206,7 +214,7 @@ export function VisitDatePicker({
             value ? 'text-foreground' : 'text-muted-foreground',
           )}
         >
-          {value ? formatDisplay(value) : 'dd/mm/yyyy'}
+          {value ? formatDisplay(value) : placeholder}
         </span>
         <ChevronDown
           className={cn(

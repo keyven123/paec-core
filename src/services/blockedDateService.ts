@@ -14,7 +14,18 @@ export type BlockedDate = {
 
 export type CreateBlockedDatePayload = {
   blocked_date: string
+  blocked_date_end?: string | null
   reason?: string | null
+}
+
+export type SkippedBlockedDate = {
+  date: string
+  reason: string
+}
+
+export type CreateBlockedDateResponse = {
+  data: BlockedDate | Array<BlockedDate>
+  skipped?: Array<SkippedBlockedDate>
 }
 
 export const blockedDateService = {
@@ -39,8 +50,8 @@ export const blockedDateService = {
     resource: BlockableResource,
     uuid: string,
     payload: CreateBlockedDatePayload,
-  ): Promise<{ data: BlockedDate }> {
-    const { data } = await adminApi.post<{ data: BlockedDate }>(
+  ): Promise<CreateBlockedDateResponse> {
+    const { data } = await adminApi.post<CreateBlockedDateResponse>(
       `/v1/${resource}/${uuid}/blocked-dates`,
       payload,
     )

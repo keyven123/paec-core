@@ -7,19 +7,23 @@ import {
   Keyboard,
   Loader2,
   Search,
+  Users,
   XCircle,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import type { ReactNode } from 'react'
 
+import type {
+  OrderScanDetails,
+  OrderScanTicket,
+  ScheduleRestrictionErrorResponse,
+  TicketDetails,
+} from '@/services/ticketScannerService'
 import { getApiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { adminEventService } from '@/services/adminEventService'
-import {
-  ticketScannerService,
-  type ScheduleRestrictionErrorResponse,
-  type TicketDetails,
-} from '@/services/ticketScannerService'
+import { ticketScannerService } from '@/services/ticketScannerService'
 
 const SCANNED_PER_PAGE = 10
 
@@ -58,9 +62,7 @@ function formatVisitDate(value?: string | null): string | null {
   })
 }
 
-function restrictionFromApi(
-  data: ScheduleRestrictionErrorResponse,
-): {
+function restrictionFromApi(data: ScheduleRestrictionErrorResponse): {
   title: string
   message: string
   attendeeName?: string
@@ -103,7 +105,8 @@ function restrictionFromApi(
     default:
       return {
         title: 'Entry Not Permitted',
-        message: data.message ?? 'This ticket is not valid for entry at this time.',
+        message:
+          data.message ?? 'This ticket is not valid for entry at this time.',
         attendeeName,
       }
   }
@@ -112,13 +115,24 @@ function restrictionFromApi(
 function isEntryRestrictionError(
   err: unknown,
 ): ScheduleRestrictionErrorResponse | null {
-  const response = (err as { response?: { data?: ScheduleRestrictionErrorResponse; status?: number } })
-    .response
+  const response = (
+    err as {
+      response?: { data?: ScheduleRestrictionErrorResponse; status?: number }
+    }
+  ).response
   if (response?.status !== 403 || !response.data?.code) return null
-  if (!ENTRY_RESTRICTION_CODES.includes(response.data.code as typeof ENTRY_RESTRICTION_CODES[number])) {
+  if (
+    !ENTRY_RESTRICTION_CODES.includes(
+      response.data.code as (typeof ENTRY_RESTRICTION_CODES)[number],
+    )
+  ) {
     return null
   }
   return response.data
+}
+
+function isNotFoundError(err: unknown): boolean {
+  return (err as { response?: { status?: number } }).response?.status === 404
 }
 
 const cardClassName =
@@ -155,13 +169,18 @@ export function AdminActivityScannerSection({
   const [successTicket, setSuccessTicket] = useState<TicketDetails | null>(null)
   const [usedTicket, setUsedTicket] = useState<TicketDetails | null>(null)
   const [invalidTicket, setInvalidTicket] = useState<TicketDetails | null>(null)
+  const [orderScan, setOrderScan] = useState<OrderScanDetails | null>(null)
+  const [usedOrder, setUsedOrder] = useState<OrderScanDetails | null>(null)
   const [scheduleWarning, setScheduleWarning] = useState<{
     title: string
     message: string
     attendeeName?: string
     visitDate?: string | null
+    order?: OrderScanDetails
   } | null>(null)
-  const [scannedAttendees, setScannedAttendees] = useState<ScannedAttendee[]>([])
+  const [scannedAttendees, setScannedAttendees] = useState<ScannedAttendee[]>(
+    [],
+  )
   const [scannedSearch, setScannedSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [scannedDate, setScannedDate] = useState(getTodayDateString)
@@ -174,7 +193,10 @@ export function AdminActivityScannerSection({
   const [loadingScanned, setLoadingScanned] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(scannedSearch.trim()), 400)
+    const timer = setTimeout(
+      () => setDebouncedSearch(scannedSearch.trim()),
+      400,
+    )
     return () => clearTimeout(timer)
   }, [scannedSearch])
 
@@ -226,17 +248,21 @@ export function AdminActivityScannerSection({
     return () => {
       if (scannerRef.current) {
         const scanner = scannerRef.current
-        scanner.stop().catch(() => {}).finally(() => {
-          try {
-            scanner.clear()
-          } catch {
-            /* ignore */
-          }
-          scannerRef.current = null
-        })
+        scanner
+          .stop()
+          .catch(() => {})
+          .finally(() => {
+            try {
+              scanner.clear()
+            } catch {
+              /* ignore */
+            }
+            scannerRef.current = null
+          })
       }
       if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
+      if (countdownIntervalRef.current)
+        clearInterval(countdownIntervalRef.current)
     }
   }, [])
 
@@ -330,20 +356,105 @@ export function AdminActivityScannerSection({
   }
 
   const resumeScanning = () => {
+    if (showManualInput) return
     setTimeout(() => void startScanning(), 300)
   }
 
+  const startConfirmCountdown = (onConfirm: () => Promise<void>) => {
+    clearConfirmTimers()
+    setConfirmCountdown(5)
+
+    countdownIntervalRef.current = setInterval(() => {
+      setConfirmCountdown((prev) => {
+        if (prev <= 1 && countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current)
+          countdownIntervalRef.current = null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    confirmTimeoutRef.current = setTimeout(() => {
+      confirmTimeoutRef.current = null
+      void onConfirm()
+    }, 5000)
+  }
+
+  const showRestrictionOr = (err: unknown, fallback: () => void) => {
+    const restriction = isEntryRestrictionError(err)
+    if (!restriction) {
+      fallback()
+      return
+    }
+    const parsed = restrictionFromApi(restriction)
+    const order = restriction.data
+    setScheduleWarning({
+      title: parsed.title,
+      message: parsed.message,
+      attendeeName: order?.holder_name ?? parsed.attendeeName,
+      visitDate: parsed.visitDate,
+      order,
+    })
+  }
+
+  const handleOrderScanned = (order: OrderScanDetails) => {
+    if (order.admittable_count === 0) {
+      setUsedOrder(order)
+      return
+    }
+
+    setOrderScan(order)
+    startConfirmCountdown(async () => {
+      try {
+        const result = await ticketScannerService.confirmOrderEntry(
+          order.qr_code,
+          activityId,
+        )
+        setOrderScan(null)
+        toast.success(
+          `Entry confirmed for ${result.admitted_count} ticket${result.admitted_count !== 1 ? 's' : ''}!`,
+        )
+        void fetchScannedAttendees()
+        resumeScanning()
+      } catch (err) {
+        setOrderScan(null)
+        showRestrictionOr(err, () => {
+          toast.error(getApiErrorMessage(err, 'Failed to confirm entry.'))
+          resumeScanning()
+        })
+      }
+    })
+  }
+
+  const cancelOrderScan = () => {
+    clearConfirmTimers()
+    setOrderScan(null)
+    resumeScanning()
+  }
+
   const handleQrCodeScanned = async (qrCode: string) => {
-    if (loading || successTicket) return
+    if (loading || successTicket || orderScan) return
 
     setLoading(true)
     await stopScanning()
 
     try {
-      const details = await ticketScannerService.getTicketsDetailByQrCode(
-        qrCode,
-        activityId,
-      )
+      let details: TicketDetails
+      try {
+        details = await ticketScannerService.getTicketsDetailByQrCode(
+          qrCode,
+          activityId,
+        )
+      } catch (ticketErr) {
+        if (!isNotFoundError(ticketErr)) throw ticketErr
+        const order = await ticketScannerService
+          .getOrderDetailsByQrCode(qrCode, activityId)
+          .catch((orderErr: unknown) => {
+            throw isNotFoundError(orderErr) ? ticketErr : orderErr
+          })
+        handleOrderScanned(order)
+        return
+      }
 
       if (details.event_uuid !== activityId) {
         toast.error('This ticket does not belong to this activity.')
@@ -371,22 +482,8 @@ export function AdminActivityScannerSection({
         return
       }
 
-      clearConfirmTimers()
-      setConfirmCountdown(5)
       setSuccessTicket(details)
-
-      countdownIntervalRef.current = setInterval(() => {
-        setConfirmCountdown((prev) => {
-          if (prev <= 1 && countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current)
-            countdownIntervalRef.current = null
-          }
-          return prev - 1
-        })
-      }, 1000)
-
-      confirmTimeoutRef.current = setTimeout(async () => {
-        confirmTimeoutRef.current = null
+      startConfirmCountdown(async () => {
         try {
           await ticketScannerService.confirmEntry(details.uuid)
           setSuccessTicket(null)
@@ -394,37 +491,18 @@ export function AdminActivityScannerSection({
           void fetchScannedAttendees()
           resumeScanning()
         } catch (err) {
-          const restriction = isEntryRestrictionError(err)
-          if (restriction) {
-            setSuccessTicket(null)
-            const parsed = restrictionFromApi(restriction)
-            setScheduleWarning({
-              title: parsed.title,
-              message: parsed.message,
-              attendeeName: parsed.attendeeName,
-              visitDate: parsed.visitDate,
-            })
-            return
-          }
-          toast.error(getApiErrorMessage(err, 'Failed to confirm entry.'))
           setSuccessTicket(null)
-          resumeScanning()
+          showRestrictionOr(err, () => {
+            toast.error(getApiErrorMessage(err, 'Failed to confirm entry.'))
+            resumeScanning()
+          })
         }
-      }, 5000)
+      })
     } catch (err) {
-      const restriction = isEntryRestrictionError(err)
-      if (restriction) {
-        const parsed = restrictionFromApi(restriction)
-        setScheduleWarning({
-          title: parsed.title,
-          message: parsed.message,
-          attendeeName: parsed.attendeeName,
-          visitDate: parsed.visitDate,
-        })
-        return
-      }
-      toast.error(getApiErrorMessage(err, 'Ticket not found.'))
-      resumeScanning()
+      showRestrictionOr(err, () => {
+        toast.error(getApiErrorMessage(err, 'Ticket not found.'))
+        resumeScanning()
+      })
     } finally {
       setLoading(false)
     }
@@ -577,7 +655,7 @@ export function AdminActivityScannerSection({
                     </div>
                   ) : null}
 
-                  {!scanning && !loading && !successTicket ? (
+                  {!scanning && !loading && !successTicket && !orderScan ? (
                     <button
                       type="button"
                       onClick={() => void startScanning()}
@@ -630,6 +708,13 @@ export function AdminActivityScannerSection({
                 <p className="mt-0.5">
                   Entry is confirmed automatically 5 seconds after a successful
                   scan.
+                </p>
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Group Pass</span>
+                <p className="mt-0.5">
+                  Scanning an order&apos;s group QR code admits every unused
+                  ticket in that order at once.
                 </p>
               </li>
               <li>
@@ -750,7 +835,9 @@ export function AdminActivityScannerSection({
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        disabled={scannedMeta.current_page <= 1 || loadingScanned}
+                        disabled={
+                          scannedMeta.current_page <= 1 || loadingScanned
+                        }
                         onClick={() => setScannedPage((p) => p - 1)}
                         className="rounded-lg border border-violet-200 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                       >
@@ -780,7 +867,9 @@ export function AdminActivityScannerSection({
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-violet-100 bg-white p-6 text-center shadow-2xl">
             <CheckCircle2 className="mx-auto mb-4 size-16 text-emerald-500" />
-            <h3 className="text-lg font-bold text-foreground">Scan Successful</h3>
+            <h3 className="text-lg font-bold text-foreground">
+              Scan Successful
+            </h3>
             <p className="mt-2 text-base font-semibold text-foreground">
               {formatAttendeeName(successTicket)}
             </p>
@@ -803,6 +892,66 @@ export function AdminActivityScannerSection({
             </p>
           </div>
         </div>
+      ) : null}
+
+      {orderScan ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-violet-100 bg-white p-6 text-center shadow-2xl">
+            <Users className="mx-auto mb-4 size-14 text-emerald-500" />
+            <h3 className="text-lg font-bold text-foreground">
+              Group Pass Scanned
+            </h3>
+            {orderScan.holder_name ? (
+              <p className="mt-2 text-base font-semibold text-foreground">
+                {orderScan.holder_name}
+              </p>
+            ) : null}
+            <p className="mt-1 text-sm text-muted-foreground">
+              Order {orderScan.order_number}
+            </p>
+            {formatVisitDate(orderScan.date_of_visit) ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Date of Visit: {formatVisitDate(orderScan.date_of_visit)}
+              </p>
+            ) : null}
+            <OrderTicketList tickets={orderScan.tickets} />
+            <p className="mt-4 text-sm text-muted-foreground">
+              Admitting{' '}
+              <span className="font-semibold text-foreground">
+                {orderScan.admittable_count} ticket
+                {orderScan.admittable_count !== 1 ? 's' : ''}
+              </span>{' '}
+              in{' '}
+              <span className="font-semibold text-foreground">
+                {confirmCountdown}
+              </span>{' '}
+              second{confirmCountdown !== 1 ? 's' : ''}…
+            </p>
+            <button
+              type="button"
+              onClick={cancelOrderScan}
+              className="mt-4 w-full rounded-lg border border-violet-200 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-violet-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {usedOrder ? (
+        <ScannerResultModal
+          title="Entry Not Permitted"
+          message="No tickets left to admit in this order. They have already been used or are no longer valid."
+          attendeeName={usedOrder.holder_name ?? undefined}
+          visitDate={formatVisitDate(usedOrder.date_of_visit)}
+          onClose={() => {
+            setUsedOrder(null)
+            resumeScanning()
+          }}
+          variant="error"
+        >
+          <OrderTicketList tickets={usedOrder.tickets} />
+        </ScannerResultModal>
       ) : null}
 
       {usedTicket ? (
@@ -848,9 +997,76 @@ export function AdminActivityScannerSection({
             resumeScanning()
           }}
           variant="warning"
-        />
+        >
+          {scheduleWarning.order ? (
+            <>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Group pass · Order {scheduleWarning.order.order_number}
+              </p>
+              <OrderTicketList tickets={scheduleWarning.order.tickets} />
+            </>
+          ) : null}
+        </ScannerResultModal>
       ) : null}
     </div>
+  )
+}
+
+function orderTicketState(ticket: OrderScanTicket): {
+  label: string
+  className: string
+} {
+  if (ticket.used_at || ticket.status === 'used') {
+    return { label: 'Already used', className: 'bg-gray-100 text-gray-600' }
+  }
+  if (ticket.status !== 'active') {
+    return { label: ticket.status, className: 'bg-red-50 text-red-600' }
+  }
+  if (ticket.entry_restriction) {
+    const labels: Record<string, string> = {
+      visit_not_today: 'Not today',
+      visit_expired: 'Expired',
+      schedule_not_started: 'Too early',
+      schedule_ended: 'Schedule ended',
+    }
+    return {
+      label: labels[ticket.entry_restriction] ?? 'Not valid now',
+      className: 'bg-amber-50 text-amber-700',
+    }
+  }
+  return { label: 'Admit', className: 'bg-emerald-50 text-emerald-700' }
+}
+
+function OrderTicketList({ tickets }: { tickets: Array<OrderScanTicket> }) {
+  return (
+    <ul className="mt-4 max-h-56 divide-y divide-violet-50 overflow-y-auto rounded-lg border border-violet-100 text-left">
+      {tickets.map((ticket) => {
+        const state = orderTicketState(ticket)
+        return (
+          <li
+            key={ticket.uuid}
+            className="flex items-center justify-between gap-3 px-3 py-2"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {ticket.event_ticket?.name ?? 'Ticket'}
+              </p>
+              <p className="truncate font-mono text-[11px] text-muted-foreground">
+                {ticket.ticket_number}
+              </p>
+            </div>
+            <span
+              className={cn(
+                'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize',
+                state.className,
+              )}
+            >
+              {state.label}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -862,6 +1078,7 @@ function ScannerResultModal({
   visitDate,
   onClose,
   variant,
+  children,
 }: {
   title: string
   message: string
@@ -870,12 +1087,11 @@ function ScannerResultModal({
   visitDate?: string | null
   onClose: () => void
   variant: 'error' | 'warning'
+  children?: ReactNode
 }) {
   const holderName =
-    attendeeName?.trim() ||
-    (ticket ? formatAttendeeName(ticket) : null)
-  const visitLabel =
-    visitDate ?? formatVisitDate(ticket?.date_of_visit)
+    attendeeName?.trim() || (ticket ? formatAttendeeName(ticket) : null)
+  const visitLabel = visitDate ?? formatVisitDate(ticket?.date_of_visit)
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -902,6 +1118,7 @@ function ScannerResultModal({
             <span className="font-semibold text-foreground">{visitLabel}</span>
           </p>
         ) : null}
+        {children}
         <button
           type="button"
           onClick={onClose}

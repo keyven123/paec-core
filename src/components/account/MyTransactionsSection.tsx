@@ -166,7 +166,73 @@ export function MyTransactionsSection() {
             {total} transaction{total === 1 ? '' : 's'}
           </p>
 
-          <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white">
+          <ul className="space-y-3 md:hidden">
+            {transactions.map((transaction) => {
+              const visitDate = formatVisitDate(
+                transaction.transaction_orders?.find((o) => o.valid_until)
+                  ?.valid_until,
+              )
+
+              return (
+                <li
+                  key={transaction.uuid}
+                  className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">
+                        {transaction.event?.name ??
+                          transaction.event?.event_name ??
+                          '—'}
+                      </p>
+                      <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                        {transaction.order_number}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize',
+                        statusBadgeClass(transaction.order_status),
+                      )}
+                    >
+                      {transaction.order_status}
+                    </span>
+                  </div>
+
+                  <dl className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-violet-50/50 p-3 text-xs">
+                    <div>
+                      <dt className="text-muted-foreground">Date of visit</dt>
+                      <dd className="mt-0.5 font-medium text-foreground">
+                        {visitDate ?? '—'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Paid at</dt>
+                      <dd className="mt-0.5 font-medium text-foreground">
+                        {formatDateTime(transaction.paid_at)}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-lg font-bold text-foreground">
+                      {formatCurrency(transaction.total_amount)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTransaction(transaction)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-violet-200 px-4 text-xs font-semibold text-paec-violet transition-colors hover:bg-violet-50"
+                    >
+                      <Eye className="size-3.5" />
+                      Details
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+
+          <div className="hidden overflow-hidden rounded-2xl border border-violet-100 bg-white md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="bg-violet-50/80">

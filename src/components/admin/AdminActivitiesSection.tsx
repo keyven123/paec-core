@@ -233,7 +233,7 @@ export function AdminActivitiesSection() {
   }, [activities, search, status])
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-3 md:h-full">
       <div className="flex shrink-0 items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground lg:text-2xl">
@@ -314,8 +314,33 @@ export function AdminActivitiesSection() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm">
-        <div className="min-h-0 flex-1 overflow-auto">
+      <div className="flex flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm md:min-h-0 md:flex-1">
+        <div className="md:hidden">
+          {loading ? (
+            <p className="px-4 py-10 text-center text-sm font-medium text-muted-foreground">
+              Loading activities...
+            </p>
+          ) : filteredActivities.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm font-medium text-muted-foreground">
+              No activities found
+            </p>
+          ) : (
+            <ul className="divide-y divide-violet-50">
+              {filteredActivities.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  pendingAction={pendingAction}
+                  onPublish={handlePublish}
+                  onUnpublish={handleUnpublish}
+                  onDelete={handleDeleteRequest}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden min-h-0 flex-1 overflow-auto md:block">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-violet-50/95 backdrop-blur-sm">
               <tr className="border-b border-violet-100">
@@ -476,6 +501,81 @@ function ActivityRow({
         </div>
       </td>
     </tr>
+  )
+}
+
+function ActivityCard({
+  activity,
+  pendingAction,
+  onPublish,
+  onUnpublish,
+  onDelete,
+}: ActivityRowProps) {
+  const isPublishing =
+    pendingAction?.id === activity.id && pendingAction.type === 'publish'
+  const isUnpublishing =
+    pendingAction?.id === activity.id && pendingAction.type === 'unpublish'
+  const isDeleting =
+    pendingAction?.id === activity.id && pendingAction.type === 'delete'
+  const isBusy = isPublishing || isUnpublishing || isDeleting
+  const mobileButton = 'flex h-9 items-center justify-center text-xs'
+
+  return (
+    <li className="px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {activity.title}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+            {activity.description}
+          </p>
+        </div>
+        <StatusBadge status={activity.status} />
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">{activity.date}</p>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <Link
+          to="/admin/activities/$activityId"
+          params={{ activityId: activity.id }}
+          className={cn(actionButtonClassName('view'), mobileButton)}
+          aria-disabled={isBusy}
+          onClick={(e) => {
+            if (isBusy) e.preventDefault()
+          }}
+        >
+          View
+        </Link>
+        {activity.status !== 'published' ? (
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={() => onPublish(activity)}
+            className={cn(actionButtonClassName('publish'), mobileButton)}
+          >
+            {isPublishing ? 'Publishing…' : 'Publish'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={() => onUnpublish(activity)}
+            className={cn(actionButtonClassName('unpublish'), mobileButton)}
+          >
+            {isUnpublishing ? 'Unpublishing…' : 'Unpublish'}
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => onDelete(activity)}
+          className={cn(actionButtonClassName('delete'), mobileButton)}
+        >
+          {isDeleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+    </li>
   )
 }
 

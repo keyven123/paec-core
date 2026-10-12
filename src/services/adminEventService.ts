@@ -1,5 +1,6 @@
 import type { AxiosResponse } from 'axios'
 
+import type { PaymentGatewayOption } from '@/services/paymentGatewayService'
 import { adminApi } from '@/lib/api'
 
 export type EventReportExportType =
@@ -65,6 +66,7 @@ export type AdminEvent = {
   venue?: { uuid: string; name: string }
   category?: { uuid: string; name: string }
   event_tickets?: unknown[]
+  payment_gateways?: Array<PaymentGatewayOption>
   schedules?: Array<{
     uuid: string
     date_from: string | null

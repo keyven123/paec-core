@@ -5,14 +5,18 @@ import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import { cn } from '@/lib/utils'
 
 type ActivityShowcaseGalleryProps = {
-  images: string[]
+  images: Array<string>
   activityName: string
+  title?: string
+  subtitle?: string
   className?: string
 }
 
 export function ActivityShowcaseGallery({
   images,
   activityName,
+  title = 'Activity gallery',
+  subtitle = 'More photos from this experience',
   className,
 }: ActivityShowcaseGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -43,10 +47,10 @@ export function ActivityShowcaseGallery({
     <>
       <section className={cn('mt-6', className)}>
         <h2 className="text-lg font-bold text-foreground sm:text-xl">
-          Activity gallery
+          {title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          More photos from this experience
+          {subtitle}
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

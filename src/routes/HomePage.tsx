@@ -1,24 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { AttractionsSection } from '@/components/home/AttractionsSection'
-import { BrowseByCitySection } from '@/components/home/BrowseByCitySection'
 import { CategorySection } from '@/components/home/CategorySection'
+import { EventManagementSection } from '@/components/home/EventManagementSection'
 import { HeroSection } from '@/components/home/HeroSection'
-import { TrendingSection } from '@/components/home/TrendingSection'
+import { PromotionSection } from '@/components/home/PromotionSection'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import type { Attraction } from '@/data/mockAttractions'
+import type { PublicVenueListing } from '@/services/venueListingService'
 import {
   buildHeroSlides,
-  buildTrendingEvents,
   mergeCatalogActivities,
   marketplaceService,
 } from '@/services/marketplaceService'
+import { venueListingService } from '@/services/venueListingService'
 
 export function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [activities, setActivities] = useState<Attraction[]>([])
   const [featuredActivities, setFeaturedActivities] = useState<Attraction[]>([])
+  const [promoActivities, setPromoActivities] = useState<Attraction[]>([])
+  const [venues, setVenues] = useState<Array<PublicVenueListing>>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,18 +30,24 @@ export function HomePage() {
     async function loadActivities() {
       setLoading(true)
       try {
-        const [list, featured] = await Promise.all([
+        const [list, featured, promos, venueList] = await Promise.all([
           marketplaceService.listActivities(),
           marketplaceService.listFeaturedActivities(100),
+          marketplaceService.listPromoActivities().catch(() => []),
+          venueListingService.listPublic().catch(() => []),
         ])
         if (!cancelled) {
           setActivities(list)
           setFeaturedActivities(featured)
+          setPromoActivities(promos)
+          setVenues(venueList)
         }
       } catch {
         if (!cancelled) {
           setActivities([])
           setFeaturedActivities([])
+          setPromoActivities([])
+          setVenues([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -62,35 +71,12 @@ export function HomePage() {
       featuredActivities.length > 0 ? featuredActivities : catalogActivities
     return buildHeroSlides(source)
   }, [featuredActivities, catalogActivities])
-  const trendingEvents = useMemo(
-    () => buildTrendingEvents(catalogActivities),
-    [catalogActivities],
-  )
-  const featuredAttractions = useMemo(
-    () =>
-      (featuredActivities.length > 0 ? featuredActivities : activities).map(
-        (activity) => ({
-          id: activity.id,
-          name: activity.name,
-          price: activity.price,
-          image: activity.image,
-          location: activity.location,
-        }),
-      ),
-    [featuredActivities, activities],
-  )
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
       <main>
-        <HeroSection
-          slides={heroSlides}
-          featuredAttractions={featuredAttractions}
-          loading={loading}
-        />
-        <BrowseByCitySection loading={loading} />
-        <TrendingSection events={trendingEvents} loading={loading} />
+        <HeroSection slides={heroSlides} loading={loading} />
         <CategorySection
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
@@ -100,6 +86,8 @@ export function HomePage() {
           activities={catalogActivities}
           loading={loading}
         />
+        <EventManagementSection venues={venues} loading={loading} />
+        <PromotionSection activities={promoActivities} loading={loading} />
       </main>
       <Footer />
     </div>

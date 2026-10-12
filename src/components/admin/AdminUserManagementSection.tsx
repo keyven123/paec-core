@@ -329,7 +329,7 @@ export function AdminUserManagementSection() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-3 md:h-full">
       <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground lg:text-2xl">
@@ -369,7 +369,7 @@ export function AdminUserManagementSection() {
         </div>
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-2">
+      <div className="scrollbar-hide -mx-3 flex shrink-0 gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {userTabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -379,7 +379,7 @@ export function AdminUserManagementSection() {
               type="button"
               onClick={() => handleTabChange(tab.id)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm',
                 isActive
                   ? 'bg-paec-orange text-white shadow-sm shadow-paec-orange/20'
                   : 'border border-violet-100 bg-white text-muted-foreground hover:bg-violet-50 hover:text-foreground',
@@ -493,7 +493,39 @@ function AdminUsersTab({
         </div>
       ) : null}
 
-      <UserTable minWidth="720px">
+      <UserTable
+        minWidth="720px"
+        mobile={
+          <MobileUserList
+            items={users}
+            loading={loading}
+            loadingMessage="Loading admin users..."
+            emptyMessage="No admin users found"
+            renderItem={(user) => (
+              <li key={user.uuid} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-paec-violet">
+                  {user.full_name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {user.full_name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="text-[11px] font-medium text-paec-violet">
+                      {user.role?.name ?? '—'}
+                    </span>
+                    <StatusBadge status={normalizeStatus(user.status)} />
+                  </div>
+                </div>
+                <RowActions label={user.full_name} />
+              </li>
+            )}
+          />
+        }
+      >
         <thead className="sticky top-0 z-10 bg-violet-50/95 backdrop-blur-sm">
           <tr className="border-b border-violet-100">
             {['Role', 'Name', 'Email', 'Status', 'Actions'].map((col) => (
@@ -606,7 +638,40 @@ function CustomerUsersTab({
         </div>
       ) : null}
 
-      <UserTable minWidth="880px">
+      <UserTable
+        minWidth="880px"
+        mobile={
+          <MobileUserList
+            items={users}
+            loading={loading}
+            loadingMessage="Loading customers..."
+            emptyMessage="No customers found"
+            renderItem={(user) => (
+              <li key={user.uuid} className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <UserAvatar user={user} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {user.full_name}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                  <StatusBadge status={normalizeStatus(user.status)} />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 pl-11">
+                  <p className="text-[11px] text-muted-foreground">
+                    {user.phone_number || 'No phone'} ·{' '}
+                    {formatBirthDate(user.birth_date)}
+                  </p>
+                  <CustomerRowActions user={user} />
+                </div>
+              </li>
+            )}
+          />
+        }
+      >
         <thead className="sticky top-0 z-10 bg-violet-50/95 backdrop-blur-sm">
           <tr className="border-b border-violet-100">
             {['Image', 'Name', 'Email', 'Birth Date', 'Phone', 'Status', 'Actions'].map(
@@ -766,7 +831,7 @@ function RolesPermissionsTab({
             placeholder="Search roles..."
           />
 
-          <UserTable minWidth="560px">
+          <UserTable minWidth="420px">
             <thead className="sticky top-0 z-10 bg-violet-50/95 backdrop-blur-sm">
               <tr className="border-b border-violet-100">
                 {['Role', 'Code', 'Actions'].map((col) => (
@@ -986,20 +1051,61 @@ function SearchBar({
 
 function UserTable({
   minWidth,
+  mobile,
   children,
 }: {
   minWidth: string
+  mobile?: ReactNode
   children: ReactNode
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm">
-      <div className="min-h-0 flex-1 overflow-auto">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm md:min-h-0 md:flex-1">
+      {mobile ? <div className="md:hidden">{mobile}</div> : null}
+      <div
+        className={cn(
+          'min-h-0 flex-1 overflow-auto',
+          mobile && 'hidden md:block',
+        )}
+      >
         <table className="w-full text-left text-sm" style={{ minWidth }}>
           {children}
         </table>
       </div>
     </div>
   )
+}
+
+function MobileUserList<T>({
+  items,
+  loading,
+  loadingMessage,
+  emptyMessage,
+  renderItem,
+}: {
+  items: Array<T>
+  loading: boolean
+  loadingMessage: string
+  emptyMessage: string
+  renderItem: (item: T) => ReactNode
+}) {
+  if (loading) {
+    return (
+      <p className="px-4 py-12 text-center text-sm text-muted-foreground">
+        {loadingMessage}
+      </p>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="px-4 py-12 text-center">
+        <Users className="mx-auto mb-2 size-8 text-muted-foreground/30" />
+        <p className="text-sm font-medium text-muted-foreground">{emptyMessage}</p>
+      </div>
+    )
+  }
+
+  return <ul className="divide-y divide-violet-50">{items.map(renderItem)}</ul>
 }
 
 function EmptyState({

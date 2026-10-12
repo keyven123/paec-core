@@ -1,4 +1,5 @@
 import type { CreateActivityForm } from '@/types/createActivity'
+import { PAYMENT_STEP, SUMMARY_STEP } from '@/types/createActivity'
 
 export type ExistingImage = {
   uuid: string
@@ -26,6 +27,7 @@ export const editActivitySteps = [
   { id: 1, label: 'Basics', subtitle: 'Attraction details' },
   { id: 2, label: 'Images', subtitle: 'Visuals & preview' },
   { id: 3, label: 'Attendee & Tracking', subtitle: 'Fields & pixel' },
-  { id: 4, label: 'Summary', subtitle: 'Review before publish' },
-  { id: 5, label: 'Preview', subtitle: 'Microsite preview' },
+  { id: PAYMENT_STEP, label: 'Payment', subtitle: 'Payment gateways' },
+  { id: SUMMARY_STEP, label: 'Summary', subtitle: 'Review before publish' },
+  { id: 6, label: 'Preview', subtitle: 'Microsite preview' },
 ] as const

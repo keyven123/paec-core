@@ -190,7 +190,65 @@ export function AdminTransactionsSection() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="md:hidden">
+          <div className="flex items-center justify-between border-b border-violet-100 bg-violet-50/50 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+            <span>Transactions</span>
+            <span>{loading ? 'Confirmed: —' : `Confirmed: ${confirmedCount}`}</span>
+          </div>
+          {loading ? (
+            <p className="px-4 py-14 text-center text-sm text-muted-foreground">
+              Loading transactions...
+            </p>
+          ) : transactions.length === 0 ? (
+            <div className="px-4 py-14 text-center">
+              <Ticket className="mx-auto mb-3 size-10 text-muted-foreground/30" />
+              <p className="text-sm font-medium text-muted-foreground">
+                No transactions found
+              </p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-violet-50">
+              {transactions.map((tx) => (
+                <li key={tx.uuid} className="px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {tx.user?.name ?? '—'}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {tx.user?.email ?? ''}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-semibold text-foreground">
+                      {formatCurrency(tx.total_amount)}
+                    </p>
+                  </div>
+                  <p className="mt-2 truncate text-sm text-foreground">
+                    {tx.event?.event_name ?? tx.event?.name ?? '—'}
+                  </p>
+                  <p className="truncate font-mono text-[11px] text-muted-foreground">
+                    {tx.order_number}
+                    {tx.payment_provider ? ` · ${tx.payment_provider}` : ''}
+                  </p>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+                    <span
+                      className={cn(
+                        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize',
+                        statusBadgeClass(tx.order_status),
+                      )}
+                    >
+                      {tx.order_status}
+                    </span>
+                    <span>Visit {formatVisitDate(getVisitDate(tx))}</span>
+                    <span>Paid {formatDateTime(tx.paid_at ?? tx.created_at)}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[980px] text-sm">
             <thead className="border-b border-violet-100 bg-violet-50/50">
               <tr className="text-left text-muted-foreground">
