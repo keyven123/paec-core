@@ -1,5 +1,16 @@
 import type { CreateActivityForm } from '@/types/createActivity'
 
+/** Sent as JSON so an empty selection still reaches the API (multipart can't carry `[]`). */
+export function appendPaymentGatewayUuids(
+  formData: FormData,
+  form: Pick<CreateActivityForm, 'paymentGateways'>,
+) {
+  formData.append(
+    'payment_gateway_uuids',
+    JSON.stringify(form.paymentGateways.map((gateway) => gateway.uuid)),
+  )
+}
+
 export function buildCreateActivityFormData(
   form: CreateActivityForm,
   options: { publish?: boolean } = {},
@@ -35,11 +46,16 @@ export function buildCreateActivityFormData(
     formData.append(`event_showcase[${index}]`, file)
   })
 
+  appendPaymentGatewayUuids(formData, form)
+
   form.tickets.forEach((ticket, index) => {
     formData.append(`tickets[${index}][name]`, ticket.name.trim())
     formData.append(`tickets[${index}][price]`, ticket.price)
     if (ticket.description.trim()) {
-      formData.append(`tickets[${index}][description]`, ticket.description.trim())
+      formData.append(
+        `tickets[${index}][description]`,
+        ticket.description.trim(),
+      )
     }
     formData.append(
       `tickets[${index}][max_ticket]`,

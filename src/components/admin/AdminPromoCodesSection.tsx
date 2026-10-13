@@ -133,11 +133,12 @@ export function AdminPromoCodesSection() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-3 md:h-full">
       <div className="flex shrink-0 items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-foreground lg:text-2xl">
-            Promo Code Management
+            <span className="sm:hidden">Promo Codes</span>
+            <span className="hidden sm:inline">Promo Code Management</span>
           </h1>
           <p className="text-xs text-muted-foreground sm:text-sm">
             Manage all promo codes
@@ -150,7 +151,8 @@ export function AdminPromoCodesSection() {
           className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-paec-violet px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-paec-violet-dark sm:gap-2 sm:px-4 sm:text-sm"
         >
           <Plus className="size-3.5 sm:size-4" />
-          Create Promo Code
+          <span className="sm:hidden">New Code</span>
+          <span className="hidden sm:inline">Create Promo Code</span>
         </button>
       </div>
 
@@ -181,7 +183,7 @@ export function AdminPromoCodesSection() {
           <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <button
             type="button"
             onClick={applyFilters}
@@ -199,8 +201,35 @@ export function AdminPromoCodesSection() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm">
-        <div className="min-h-0 flex-1 overflow-auto">
+      <div className="flex flex-col overflow-hidden rounded-xl border border-violet-100 bg-white shadow-sm md:min-h-0 md:flex-1">
+        <div className="md:hidden">
+          {loading ? (
+            <div className="px-4 py-12 text-center">
+              <Loader2 className="mx-auto mb-2 size-6 animate-spin text-paec-violet" />
+              <p className="text-sm text-muted-foreground">Loading promo codes…</p>
+            </div>
+          ) : filteredPromoCodes.length === 0 ? (
+            <div className="px-4 py-12 text-center">
+              <Tag className="mx-auto mb-2 size-8 text-muted-foreground/30" />
+              <p className="text-sm font-medium text-muted-foreground">
+                No promo codes found
+              </p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-violet-50">
+              {filteredPromoCodes.map((promo) => (
+                <PromoCodeCard
+                  key={promo.uuid}
+                  promo={promo}
+                  onView={() => setViewTarget(promo)}
+                  onDelete={() => setDeleteTarget(promo)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden min-h-0 flex-1 overflow-auto md:block">
           <table className="w-full min-w-[800px] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-violet-50/95 backdrop-blur-sm">
               <tr className="border-b border-violet-100">
@@ -363,6 +392,80 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-foreground">{value}</dd>
     </div>
+  )
+}
+
+function formatDiscount(promo: PromoCode) {
+  return promo.discount_type === 'amount'
+    ? `₱${Number.parseFloat(promo.discount_value).toFixed(2)}`
+    : `${Number.parseFloat(promo.discount_value).toFixed(2)}%`
+}
+
+function PromoCodeCard({
+  promo,
+  onView,
+  onDelete,
+}: {
+  promo: PromoCode
+  onView: () => void
+  onDelete: () => void
+}) {
+  return (
+    <li className="px-4 py-3.5">
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-paec-orange">
+          <Tag className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="truncate text-sm font-bold text-foreground">{promo.code}</p>
+            <StatusBadge status={getPromoDisplayStatus(promo)} />
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {getActivityName(promo)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-violet-50/50 p-2.5 text-xs">
+        <div>
+          <p className="text-[10px] text-muted-foreground uppercase">Discount</p>
+          <p className="font-semibold text-paec-orange">{formatDiscount(promo)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground uppercase">Usage</p>
+          <p className="font-medium text-foreground">
+            {promo.is_unlimited
+              ? 'Unlimited'
+              : `${promo.max_use?.toLocaleString() ?? 0} max`}
+          </p>
+        </div>
+        <div className="col-span-2">
+          <p className="text-[10px] text-muted-foreground uppercase">Valid period</p>
+          <p className="text-foreground">
+            {formatPromoDateTime(promo.usable_from)} –{' '}
+            {formatPromoDateTime(promo.usable_to)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onView}
+          className={cn(actionButtonClassName('view'), 'h-9 text-xs')}
+        >
+          View
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className={cn(actionButtonClassName('delete'), 'h-9 text-xs')}
+        >
+          Delete
+        </button>
+      </div>
+    </li>
   )
 }
 

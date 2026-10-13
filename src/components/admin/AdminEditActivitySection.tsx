@@ -7,6 +7,7 @@ import { CreateActivityStepper } from '@/components/admin/create-activity/Create
 import { StepAttendeeTracking } from '@/components/admin/create-activity/steps/StepAttendeeTracking'
 import { StepBasics } from '@/components/admin/create-activity/steps/StepBasics'
 import { StepImages } from '@/components/admin/create-activity/steps/StepImages'
+import { StepPaymentGateway } from '@/components/admin/create-activity/steps/StepPaymentGateway'
 import { StepPreview } from '@/components/admin/create-activity/steps/StepPreview'
 import { StepSummary } from '@/components/admin/create-activity/steps/StepSummary'
 import { getApiErrorMessage } from '@/lib/api'
@@ -16,6 +17,7 @@ import {
 } from '@/lib/editActivity'
 import { adminEventService } from '@/services/adminEventService'
 import { categoryService } from '@/services/categoryService'
+import { PAYMENT_STEP, SUMMARY_STEP } from '@/types/createActivity'
 import {
   editActivitySteps,
   type EditActivityForm,
@@ -58,6 +60,7 @@ export function AdminEditActivitySection({
   }, [loadData])
 
   const currentStepMeta = editActivitySteps[step - 1]
+  const lastStep = editActivitySteps.length
 
   const updateForm = (updates: Partial<EditActivityForm>) => {
     setForm((current) => (current ? { ...current, ...updates } : current))
@@ -120,7 +123,7 @@ export function AdminEditActivitySection({
 
   const handleNext = () => {
     if (!validateStep()) return
-    setStep((current) => Math.min(current + 1, 5))
+    setStep((current) => Math.min(current + 1, lastStep))
   }
 
   const handleBack = () => setStep((current) => Math.max(current - 1, 1))
@@ -151,7 +154,7 @@ export function AdminEditActivitySection({
               Edit Fun Activity
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Step {step} of 5 — {currentStepMeta.subtitle}
+              Step {step} of {lastStep} — {currentStepMeta.subtitle}
             </p>
           </div>
           <button
@@ -184,10 +187,13 @@ export function AdminEditActivitySection({
             showMetaPixel
           />
         )}
-        {step === 4 && (
+        {step === PAYMENT_STEP && (
+          <StepPaymentGateway form={form} onChange={updateForm} />
+        )}
+        {step === SUMMARY_STEP && (
           <StepSummary form={form} onEditStep={(nextStep) => setStep(nextStep)} />
         )}
-        {step === 5 && <StepPreview form={form} />}
+        {step === lastStep && <StepPreview form={form} />}
       </div>
 
       <div className="flex shrink-0 items-center justify-between gap-3 border-t border-violet-100 bg-white pt-3">
@@ -216,7 +222,7 @@ export function AdminEditActivitySection({
             </button>
           )}
 
-          {step < 5 ? (
+          {step < lastStep ? (
             <button
               type="button"
               onClick={handleNext}

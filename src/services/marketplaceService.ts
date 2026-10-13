@@ -1,5 +1,9 @@
 import type { Attraction, HeroSlide } from '@/data/mockAttractions'
-import type { TrendingEvent } from '@/data/mockTrending'
+import type {
+  PaymentGatewayEnvironment,
+  PaymentGatewayProvider,
+  PaynamicsChannel,
+} from '@/services/paymentGatewayService'
 import { api } from '@/lib/api'
 import { resolveImageUrl } from '@/lib/imageUtils'
 
@@ -23,27 +27,43 @@ export type PublicEvent = {
   slug: string | null
   event_name: string
   event_description: string
+  contact_email?: string | null
   address: string
   city?: string
   category_name?: string
   event_section_name?: string
   price_start?: string | number | null
+  discounted_price_start?: number | null
+  max_discount_percent?: number | null
+  max_discount_amount?: number | null
+  discount_type?: 'percentage' | 'amount' | null
   portrait_image?: PublicEventImage | null
   featured_image?: PublicEventImage | null
-  event_showcase?: PublicEventImage[] | null
+  event_showcase?: Array<PublicEventImage> | null
   category?: { uuid: string; name: string }
   schedules?: Array<{
     date_from?: string
     date_to?: string
   }>
-  event_locations?: PublicEventLocation[]
+  event_locations?: Array<PublicEventLocation>
   today_cutoff_time?: string | null
+  payment_gateways?: Array<PublicPaymentGateway>
+}
+
+export type PublicPaymentGateway = {
+  uuid: string
+  name: string
+  provider: PaymentGatewayProvider
+  environment: PaymentGatewayEnvironment | null
+  /** Paynamics only: channels the customer can choose. */
+  payment_channels?: Array<PaynamicsChannel> | null
 }
 
 export type PublicEventTicket = {
   uuid: string
   name: string
   price: string
+  discounted_price?: number | string | null
   description?: string
 }
 
@@ -65,17 +85,17 @@ type BrowseByCityLocationApi = Omit<BrowseByCityLocation, 'image'> & {
 }
 
 type BrowseByCityApiData = {
-  cities: string[]
-  locations: BrowseByCityLocationApi[]
+  cities: Array<string>
+  locations: Array<BrowseByCityLocationApi>
 }
 
 export type BrowseByCityData = {
-  cities: string[]
-  locations: BrowseByCityLocation[]
+  cities: Array<string>
+  locations: Array<BrowseByCityLocation>
 }
 
 type PaginatedPublicEvents = {
-  data: PublicEvent[]
+  data: Array<PublicEvent>
   meta: {
     total: number
     current_page: number
@@ -104,7 +124,10 @@ function getEventImage(event: PublicEvent): string {
   return ''
 }
 
-function mapShowcaseImages(event: PublicEvent, heroImage: string): string[] {
+function mapShowcaseImages(
+  event: PublicEvent,
+  heroImage: string,
+): Array<string> {
   const images = (event.event_showcase ?? [])
     .map((image) => resolveImageUrl(image.url))
     .filter((url): url is string => Boolean(url))
@@ -136,7 +159,10 @@ function mapEventLocations(event: PublicEvent): Attraction['locations'] {
   }))
 }
 
-function formatLocationSummary(locations: Attraction['locations'], fallback: string): string {
+function formatLocationSummary(
+  locations: Attraction['locations'],
+  fallback: string,
+): string {
   if (locations.length === 0) return fallback
   if (locations.length === 1) return locations[0].label
   const cities = [...new Set(locations.map((location) => location.city))]
@@ -162,13 +188,19 @@ function mapBrowseByCityLocation(
 
 export function mapPublicEventToAttraction(
   event: PublicEvent,
-  tickets: PublicEventTicket[] = [],
+  tickets: Array<PublicEventTicket> = [],
 ): Attraction {
-  const categoryName =
-    event.category_name ?? event.category?.name ?? 'Activity'
+  const categoryName = event.category_name ?? event.category?.name ?? 'Activity'
   const locations = mapEventLocations(event)
   const fallbackLocation = event.city || event.address || 'Philippines'
   const heroImage = getEventImage(event)
+  const basePrice = toNumber(event.price_start)
+  const discountPercent = event.max_discount_percent ?? 0
+  const discountedPrice =
+    discountPercent > 0 && event.discounted_price_start != null
+      ? toNumber(event.discounted_price_start)
+      : null
+  const hasLowerPrice = discountedPrice !== null && discountedPrice < basePrice
 
   return {
     id: event.slug ?? event.uuid,
@@ -178,7 +210,16 @@ export function mapPublicEventToAttraction(
     locations,
     category: categoryName,
     categoryLabel: categoryName.toUpperCase(),
-    price: toNumber(event.price_start),
+    price: hasLowerPrice ? discountedPrice : basePrice,
+    originalPrice: hasLowerPrice ? basePrice : undefined,
+    discountPercent: discountPercent > 0 ? discountPercent : undefined,
+    discountType:
+      discountPercent > 0 ? (event.discount_type ?? 'percentage') : undefined,
+    discountAmount:
+      discountPercent > 0
+        ? (event.max_discount_amount ?? undefined)
+        : undefined,
+    promo: discountPercent > 0,
     image: heroImage,
     showcaseImages: mapShowcaseImages(event, heroImage),
     featured: event.event_section_name === 'featured',
@@ -188,21 +229,33 @@ export function mapPublicEventToAttraction(
     reviewCount: 0,
     description: event.event_description,
     tags: categoryName ? [categoryName] : [],
-    ticketTypes: tickets.map((ticket) => ({
-      id: ticket.uuid,
-      name: ticket.name,
-      price: toNumber(ticket.price),
-    })),
+    ticketTypes: tickets.map((ticket) => {
+      const listPrice = toNumber(ticket.price)
+      const finalPrice =
+        ticket.discounted_price != null
+          ? toNumber(ticket.discounted_price)
+          : listPrice
+      const discounted = finalPrice < listPrice
+
+      return {
+        id: ticket.uuid,
+        name: ticket.name,
+        price: discounted ? finalPrice : listPrice,
+        originalPrice: discounted ? listPrice : undefined,
+        description: ticket.description,
+      }
+    }),
     todayCutoffTime: event.today_cutoff_time ?? null,
+    contactEmail: event.contact_email ?? null,
   }
 }
 
 export function mergeCatalogActivities(
-  catalog: Attraction[],
-  featured: Attraction[],
-): Attraction[] {
+  catalog: Array<Attraction>,
+  featured: Array<Attraction>,
+): Array<Attraction> {
   const seen = new Set<string>()
-  const merged: Attraction[] = []
+  const merged: Array<Attraction> = []
 
   for (const activity of [...catalog, ...featured]) {
     const key = activity.eventUuid
@@ -214,7 +267,9 @@ export function mergeCatalogActivities(
   return merged
 }
 
-export function buildHeroSlides(activities: Attraction[]): HeroSlide[] {
+export function buildHeroSlides(
+  activities: Array<Attraction>,
+): Array<HeroSlide> {
   if (activities.length === 0) return []
 
   return activities.map((activity, index) => {
@@ -234,6 +289,10 @@ export function buildHeroSlides(activities: Attraction[]): HeroSlide[] {
         'Book tickets for the best activities and experiences across the Philippines.',
       location: activity.location,
       priceFrom: activity.price,
+      originalPrice: activity.originalPrice,
+      discountPercent: activity.discountPercent,
+      discountType: activity.discountType,
+      discountAmount: activity.discountAmount,
       image: activity.image,
       featuredCard: {
         label: 'Featured Activity',
@@ -245,26 +304,8 @@ export function buildHeroSlides(activities: Attraction[]): HeroSlide[] {
   })
 }
 
-export function buildTrendingEvents(activities: Attraction[]): TrendingEvent[] {
-  const badges = ['SELLING FAST', 'FEATURED', 'NEW', 'POPULAR', 'LIMITED']
-
-  return activities.slice(0, 5).map((activity, index) => ({
-    id: `trending-${activity.id}`,
-    attractionId: activity.id,
-    title: activity.name,
-    location: activity.location,
-    date: activity.hours,
-    price: activity.price,
-    category: activity.categoryLabel,
-    badge: badges[index % badges.length],
-    image: activity.image,
-    featured: index === 0,
-    sellingFast: index === 0,
-  }))
-}
-
 export const marketplaceService = {
-  async listFeaturedActivities(limit = 100): Promise<Attraction[]> {
+  async listFeaturedActivities(limit = 100): Promise<Array<Attraction>> {
     const { data } = await api.get<PaginatedPublicEvents>('/v1/public/events', {
       params: {
         type: 'featured',
@@ -275,7 +316,7 @@ export const marketplaceService = {
     return data.data.map((event) => mapPublicEventToAttraction(event))
   },
 
-  async listActivities(perPage = 100): Promise<Attraction[]> {
+  async listActivities(perPage = 100): Promise<Array<Attraction>> {
     const { data } = await api.get<PaginatedPublicEvents>('/v1/public/events', {
       params: {
         type: 'amusements',
@@ -286,6 +327,23 @@ export const marketplaceService = {
     })
 
     return data.data.map((event) => mapPublicEventToAttraction(event))
+  },
+
+  async listPromoActivities(perPage = 100): Promise<Array<Attraction>> {
+    const { data } = await api.get<PaginatedPublicEvents>('/v1/public/events', {
+      params: {
+        type: 'amusements',
+        fun_type: 'promo',
+        per_page: perPage,
+        sort_by: 'created_at',
+        sort: 'desc',
+      },
+    })
+
+    return data.data.map((event) => ({
+      ...mapPublicEventToAttraction(event),
+      promo: true,
+    }))
   },
 
   async listBrowseByCity(params?: {
@@ -315,9 +373,9 @@ export const marketplaceService = {
         `/v1/public/events/${identifier}`,
       )
 
-      let tickets: PublicEventTicket[] = []
+      let tickets: Array<PublicEventTicket> = []
       try {
-        const ticketsRes = await api.get<{ data: PublicEventTicket[] }>(
+        const ticketsRes = await api.get<{ data: Array<PublicEventTicket> }>(
           `/v1/public/events/${data.data.uuid}/tickets`,
         )
         tickets = ticketsRes.data.data ?? []
@@ -329,5 +387,14 @@ export const marketplaceService = {
     } catch {
       return null
     }
+  },
+
+  async getActivityPaymentGateways(
+    identifier: string,
+  ): Promise<Array<PublicPaymentGateway>> {
+    const { data } = await api.get<{ data: PublicEvent }>(
+      `/v1/public/events/${identifier}`,
+    )
+    return data.data.payment_gateways ?? []
   },
 }

@@ -9,10 +9,44 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import './styles.css'
-import type { AccountSection } from './components/account/AccountSidebar'
 import { AccountPage } from './routes/AccountPage'
+import { AdminActivitiesPage } from './routes/admin/AdminActivitiesPage'
+import { AdminActivityDetailPage } from './routes/admin/AdminActivityDetailPage'
+import { AdminActivityScannerPage } from './routes/admin/AdminActivityScannerPage'
+import { AdminActivityCalendarPage } from './routes/admin/AdminActivityCalendarPage'
+import { AdminActivityTicketsPage } from './routes/admin/AdminActivityTicketsPage'
+import { AdminCmsPage } from './routes/admin/AdminCmsPage'
+import { AdminCreateActivityPage } from './routes/admin/AdminCreateActivityPage'
+import { AdminEditActivityPage } from './routes/admin/AdminEditActivityPage'
+import { AdminEventManagementPage } from './routes/admin/AdminEventManagementPage'
+import { AdminDashboardRoute } from './routes/admin/AdminDashboardRoute'
+import { AdminIntelligencePage } from './routes/admin/AdminIntelligencePage'
+import { AdminLayout } from './routes/admin/AdminLayout'
+import { AdminPaymentGatewayPage } from './routes/admin/AdminPaymentGatewayPage'
+import { AdminPromoCodePage } from './routes/admin/AdminPromoCodePage'
+import { AdminTransactionPage } from './routes/admin/AdminTransactionPage'
+import { AdminUserDetailPage } from './routes/admin/AdminUserDetailPage'
+import { AdminUserManagementPage } from './routes/admin/AdminUserManagementPage'
+import { AdminUserStatsPage } from './routes/admin/AdminUserStatsPage'
+import { AdminVenueDetailPage } from './routes/admin/AdminVenueDetailPage'
+import { AdminVenueFormPage } from './routes/admin/AdminVenueFormPage'
+import { AdminVenueInquiriesPage } from './routes/admin/AdminVenueInquiriesPage'
+import { AdminLoginPage } from './routes/AdminLoginPage'
+import { AttractionDetailPage } from './routes/AttractionDetailPage'
+import { CheckoutPage } from './routes/CheckoutPage'
+import { FeaturedActivitiesPage } from './routes/FeaturedActivitiesPage'
+import { HomePage } from './routes/HomePage'
+import { InfoPage } from './routes/InfoPage'
+import { OrderSuccessPage } from './routes/OrderSuccessPage'
+import {
+  PaymentCancelReturnPage,
+  PaymentSuccessReturnPage,
+} from './routes/PaymentReturnPage'
+import { VenueDetailPage } from './routes/VenueDetailPage'
+import { Toaster } from './components/ui/toast'
+import type { AccountSection } from './components/account/AccountSidebar'
 
-const accountSections: AccountSection[] = [
+const accountSections: Array<AccountSection> = [
   'tickets',
   'coupons',
   'transactions',
@@ -24,29 +58,6 @@ function parseAccountSection(value: unknown): AccountSection {
     ? (value as AccountSection)
     : 'tickets'
 }
-import { AdminActivitiesPage } from './routes/admin/AdminActivitiesPage'
-import { AdminActivityDetailPage } from './routes/admin/AdminActivityDetailPage'
-import { AdminActivityScannerPage } from './routes/admin/AdminActivityScannerPage'
-import { AdminActivityCalendarPage } from './routes/admin/AdminActivityCalendarPage'
-import { AdminActivityTicketsPage } from './routes/admin/AdminActivityTicketsPage'
-import { AdminCmsPage } from './routes/admin/AdminCmsPage'
-import { AdminCreateActivityPage } from './routes/admin/AdminCreateActivityPage'
-import { AdminEditActivityPage } from './routes/admin/AdminEditActivityPage'
-import { AdminDashboardRoute } from './routes/admin/AdminDashboardRoute'
-import { AdminIntelligencePage } from './routes/admin/AdminIntelligencePage'
-import { AdminLayout } from './routes/admin/AdminLayout'
-import { AdminPromoCodePage } from './routes/admin/AdminPromoCodePage'
-import { AdminTransactionPage } from './routes/admin/AdminTransactionPage'
-import { AdminUserDetailPage } from './routes/admin/AdminUserDetailPage'
-import { AdminUserManagementPage } from './routes/admin/AdminUserManagementPage'
-import { AdminUserStatsPage } from './routes/admin/AdminUserStatsPage'
-import { AdminLoginPage } from './routes/AdminLoginPage'
-import { AttractionDetailPage } from './routes/AttractionDetailPage'
-import { CheckoutPage } from './routes/CheckoutPage'
-import { FeaturedActivitiesPage } from './routes/FeaturedActivitiesPage'
-import { HomePage } from './routes/HomePage'
-import { InfoPage } from './routes/InfoPage'
-import { Toaster } from './components/ui/toast'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -62,6 +73,12 @@ const attractionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/attractions/$attractionId',
   component: AttractionDetailPage,
+})
+
+const venueRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/venues/$slug',
+  component: VenueDetailPage,
 })
 
 const featuredRoute = createRoute({
@@ -80,6 +97,24 @@ const checkoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/checkout',
   component: CheckoutPage,
+})
+
+const checkoutSuccessRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/checkout/success',
+  component: OrderSuccessPage,
+})
+
+const paymentSuccessRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payment/success/$transactionUuid',
+  component: PaymentSuccessReturnPage,
+})
+
+const paymentCancelRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payment/cancel/$transactionUuid',
+  component: PaymentCancelReturnPage,
 })
 
 const adminLoginRoute = createRoute({
@@ -148,10 +183,46 @@ const adminActivityCalendarRoute = createRoute({
   component: AdminActivityCalendarPage,
 })
 
+const adminEventManagementRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/event-management',
+  component: AdminEventManagementPage,
+})
+
+const adminCreateVenueRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/event-management/create',
+  component: AdminVenueFormPage,
+})
+
+const adminVenueDetailRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/event-management/$venueId',
+  component: AdminVenueDetailPage,
+})
+
+const adminEditVenueRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/event-management/$venueId/edit',
+  component: AdminVenueFormPage,
+})
+
+const adminVenueInquiriesRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/event-management/$venueId/inquiries',
+  component: AdminVenueInquiriesPage,
+})
+
 const adminPromoCodeRoute = createRoute({
   getParentRoute: () => adminLayoutRoute,
   path: '/admin/promocode',
   component: AdminPromoCodePage,
+})
+
+const adminPaymentGatewayRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/payment-gateways',
+  component: AdminPaymentGatewayPage,
 })
 
 const adminUserManagementRoute = createRoute({
@@ -196,9 +267,13 @@ const accountRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   attractionRoute,
+  venueRoute,
   featuredRoute,
   infoPageRoute,
   checkoutRoute,
+  checkoutSuccessRoute,
+  paymentSuccessRoute,
+  paymentCancelRoute,
   adminLoginRoute,
   adminLayoutRoute.addChildren([
     adminDashboardRoute,
@@ -210,7 +285,13 @@ const routeTree = rootRoute.addChildren([
     adminActivityScannerRoute,
     adminActivityTicketsRoute,
     adminActivityCalendarRoute,
+    adminEventManagementRoute,
+    adminCreateVenueRoute,
+    adminVenueDetailRoute,
+    adminEditVenueRoute,
+    adminVenueInquiriesRoute,
     adminPromoCodeRoute,
+    adminPaymentGatewayRoute,
     adminUserManagementRoute,
     adminUserDetailRoute,
     adminUserStatsRoute,

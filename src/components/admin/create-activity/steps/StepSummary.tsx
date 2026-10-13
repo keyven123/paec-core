@@ -3,6 +3,12 @@ import { useEffect, useMemo, type ReactNode } from 'react'
 
 import type { CreateActivityForm } from '@/types/createActivity'
 import type { EditActivityForm } from '@/types/editActivity'
+import {
+  EnvironmentBadge,
+  ProviderChip,
+} from '@/components/admin/PaymentGatewayBadges'
+import { getProviderMeta } from '@/services/paymentGatewayService'
+import { PAYMENT_STEP } from '@/types/createActivity'
 
 import { ImagePreviewFrame } from '../ImagePreviewFrame'
 import { sectionClassName } from '../formStyles'
@@ -267,6 +273,36 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
               <Field label="Tracking" value={trackingSummary} />
             ) : null}
           </div>
+        </ReviewBlock>
+
+        <ReviewBlock title="Payment" step={PAYMENT_STEP} onEdit={onEditStep}>
+          {form.paymentGateways.length > 0 ? (
+            <ul className="space-y-2">
+              {form.paymentGateways.map((gateway) => (
+                <li
+                  key={gateway.uuid}
+                  className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/20 px-3 py-2"
+                >
+                  <ProviderChip provider={gateway.provider} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {gateway.name}
+                    </p>
+                    <p className="truncate font-mono text-[11px] text-muted-foreground">
+                      {getProviderMeta(gateway.provider).label} ·{' '}
+                      {gateway.gateway_id}
+                    </p>
+                  </div>
+                  <EnvironmentBadge environment={gateway.environment} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Field
+              label="Payment Gateways"
+              value="None selected (platform default)"
+            />
+          )}
         </ReviewBlock>
       </section>
     </div>

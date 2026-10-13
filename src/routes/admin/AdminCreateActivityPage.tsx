@@ -7,6 +7,7 @@ import { CreateActivityStepper } from '@/components/admin/create-activity/Create
 import { StepBasics } from '@/components/admin/create-activity/steps/StepBasics'
 import { StepImages } from '@/components/admin/create-activity/steps/StepImages'
 import { StepManageTickets } from '@/components/admin/create-activity/steps/StepManageTickets'
+import { StepPaymentGateway } from '@/components/admin/create-activity/steps/StepPaymentGateway'
 import { StepPreview } from '@/components/admin/create-activity/steps/StepPreview'
 import { StepSummary } from '@/components/admin/create-activity/steps/StepSummary'
 import { getApiErrorMessage } from '@/lib/api'
@@ -17,6 +18,8 @@ import {
 import { adminEventService } from '@/services/adminEventService'
 import { categoryService } from '@/services/categoryService'
 import {
+  PAYMENT_STEP,
+  SUMMARY_STEP,
   createActivitySteps,
   initialCreateActivityForm,
   type CreateActivityForm,
@@ -49,6 +52,7 @@ export function AdminCreateActivityPage() {
   }, [loadData])
 
   const currentStepMeta = createActivitySteps[step - 1]
+  const lastStep = createActivitySteps.length
 
   const updateForm = (updates: Partial<CreateActivityForm>) => {
     setForm((prev) => ({ ...prev, ...updates }))
@@ -100,7 +104,7 @@ export function AdminCreateActivityPage() {
 
   const handleNext = () => {
     if (!validateStep()) return
-    setStep((s) => Math.min(s + 1, 5))
+    setStep((s) => Math.min(s + 1, lastStep))
   }
 
   const handleBack = () => setStep((s) => Math.max(s - 1, 1))
@@ -167,7 +171,7 @@ export function AdminCreateActivityPage() {
             Create New Fun Activity
           </h1>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Step {step} of 5 — {currentStepMeta.subtitle}
+            Step {step} of {lastStep} — {currentStepMeta.subtitle}
           </p>
         </div>
 
@@ -187,10 +191,13 @@ export function AdminCreateActivityPage() {
         {step === 3 && (
           <StepManageTickets form={form} onChange={updateForm} />
         )}
-        {step === 4 && (
+        {step === PAYMENT_STEP && (
+          <StepPaymentGateway form={form} onChange={updateForm} />
+        )}
+        {step === SUMMARY_STEP && (
           <StepSummary form={form} onEditStep={(s) => setStep(s)} />
         )}
-        {step === 5 && <StepPreview form={form} />}
+        {step === lastStep && <StepPreview form={form} />}
       </div>
 
       <div className="flex shrink-0 items-center justify-between gap-3 border-t border-violet-100 bg-white pt-3">
@@ -216,7 +223,7 @@ export function AdminCreateActivityPage() {
             </button>
           )}
 
-          {step >= 4 && (
+          {step >= SUMMARY_STEP && (
             <button
               type="button"
               onClick={handleSaveDraft}
@@ -227,7 +234,7 @@ export function AdminCreateActivityPage() {
             </button>
           )}
 
-          {step < 5 ? (
+          {step < lastStep ? (
             <button
               type="button"
               onClick={handleNext}

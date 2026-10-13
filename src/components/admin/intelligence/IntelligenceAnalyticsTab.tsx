@@ -292,25 +292,27 @@ export function IntelligenceAnalyticsTab() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button
             type="button"
             onClick={() => openExportModal('sales')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-paec-violet px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-paec-violet-dark sm:text-sm"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-paec-violet px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-paec-violet-dark sm:text-sm"
           >
-            <Download className="size-3.5" />
-            Export Sales Report
+            <Download className="size-3.5 shrink-0" />
+            <span className="sm:hidden">Sales Report</span>
+            <span className="hidden sm:inline">Export Sales Report</span>
           </button>
           <button
             type="button"
             onClick={() => openExportModal('cancelled')}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 sm:text-sm"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 sm:text-sm"
           >
-            Report Cancelled Checkouts
+            <span className="sm:hidden">Cancelled Report</span>
+            <span className="hidden sm:inline">Report Cancelled Checkouts</span>
           </button>
           <Link
             to="/admin/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-violet-50 sm:text-sm"
+            className="hidden items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-violet-50 sm:inline-flex sm:text-sm"
           >
             <ArrowLeft className="size-3.5" />
             Back to Dashboard
@@ -324,49 +326,53 @@ export function IntelligenceAnalyticsTab() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {categoryCards.map((card) => {
           const Icon = card.icon
           return (
             <div
               key={card.title}
-              className="flex items-start gap-3 rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition-colors hover:border-paec-violet/30 hover:bg-violet-50/30"
+              className="flex flex-col items-center gap-2 rounded-xl border border-violet-100 bg-white p-3 text-center shadow-sm transition-colors hover:border-paec-violet/30 hover:bg-violet-50/30 sm:flex-row sm:items-start sm:gap-3 sm:p-4 sm:text-left"
             >
               <div
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-full',
+                  'flex size-9 shrink-0 items-center justify-center rounded-full sm:size-10',
                   card.iconClass,
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-[18px] sm:size-5" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{card.title}</p>
-                <p className="text-xs text-muted-foreground">{card.description}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground sm:text-sm">
+                  {card.title}
+                </p>
+                <p className="hidden text-xs text-muted-foreground sm:block">
+                  {card.description}
+                </p>
               </div>
             </div>
           )
         })}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {kpiCards.map((card) => {
           const Icon = card.icon
           return (
             <div
               key={card.label}
-              className="flex items-center gap-3 rounded-xl border border-violet-100 bg-white p-4 shadow-sm"
+              className="flex flex-col gap-2 rounded-xl border border-violet-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:p-4"
             >
               <div
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-full',
+                  'flex size-9 shrink-0 items-center justify-center rounded-full sm:size-10',
                   card.iconClass,
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-[18px] sm:size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="truncate text-xs text-muted-foreground">{card.label}</p>
                 <p className="truncate text-lg font-bold text-foreground">{card.value}</p>
               </div>
             </div>

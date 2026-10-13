@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Loader2,
   Plus,
-  X,
 } from 'lucide-react'
 import {
   useCallback,
@@ -17,6 +16,7 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 
+import { BlockDateRangeModal } from '@/components/admin/BlockDateRangeModal'
 import { getApiErrorMessage } from '@/lib/api'
 import { adminEventService, type AdminEvent } from '@/services/adminEventService'
 import { blockedDateService } from '@/services/blockedDateService'
@@ -57,10 +57,6 @@ type AdminActivityCalendarSectionProps = {
 
 function normalizeDateKey(date: string): string {
   return date.slice(0, 10)
-}
-
-function dayHasScheduledTickets(counts: DayTicketCounts): boolean {
-  return counts.priority_ticket_count > 0 || counts.flexible_ticket_count > 0
 }
 
 function toDateKey(date: Date): string {
@@ -314,11 +310,6 @@ export function AdminActivityCalendarSection({
     Record<string, BlockedDateInfo>
   >({})
   const [showBlockedDateModal, setShowBlockedDateModal] = useState(false)
-  const [blockedDateForm, setBlockedDateForm] = useState({
-    blocked_date: '',
-    reason: '',
-  })
-  const [isCreatingBlockedDate, setIsCreatingBlockedDate] = useState(false)
 
   const monthLabel = useMemo(
     () =>
@@ -395,41 +386,6 @@ export function AdminActivityCalendarSection({
       setBlockedDatesByKey({})
     }
   }, [activityId])
-
-  const handleCreateBlockedDate = async () => {
-    const dateKey = blockedDateForm.blocked_date.trim()
-    if (!dateKey) {
-      toast.error('Please select a date.')
-      return
-    }
-
-    if (blockedDatesByKey[dateKey]) {
-      toast.error('This date is already blocked for the event.')
-      return
-    }
-
-    const dayCounts = countsByDate[dateKey]
-    if (dayCounts && dayHasScheduledTickets(dayCounts)) {
-      toast.error('There are existing tickets scheduled for this date.')
-      return
-    }
-
-    setIsCreatingBlockedDate(true)
-    try {
-      await blockedDateService.create('events', activityId, {
-        blocked_date: dateKey,
-        reason: blockedDateForm.reason.trim() || null,
-      })
-      toast.success('Blocked date added successfully.')
-      setShowBlockedDateModal(false)
-      setBlockedDateForm({ blocked_date: '', reason: '' })
-      await fetchBlockedDates()
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to add blocked date.'))
-    } finally {
-      setIsCreatingBlockedDate(false)
-    }
-  }
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -593,106 +549,12 @@ export function AdminActivityCalendarSection({
         </div>
       </div>
 
-      {showBlockedDateModal ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() =>
-              !isCreatingBlockedDate && setShowBlockedDateModal(false)
-            }
-            aria-label="Close block date modal"
-          />
-          <div className="relative z-10 w-full max-w-md rounded-2xl border border-violet-100 bg-white p-6 shadow-2xl">
-            <button
-              type="button"
-              onClick={() =>
-                !isCreatingBlockedDate && setShowBlockedDateModal(false)
-              }
-              className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground"
-              aria-label="Close"
-            >
-              <X className="size-4" />
-            </button>
-            <h3 className="text-center text-lg font-bold text-foreground">
-              Block Date
-            </h3>
-            <p className="mt-1 text-center text-sm text-muted-foreground">
-              Block a specific date for this event. Tickets cannot be purchased
-              for blocked dates.
-            </p>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label
-                  htmlFor="calendar-blocked-date"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="calendar-blocked-date"
-                  type="date"
-                  value={blockedDateForm.blocked_date}
-                  onChange={(e) =>
-                    setBlockedDateForm((current) => ({
-                      ...current,
-                      blocked_date: e.target.value,
-                    }))
-                  }
-                  min={new Date().toISOString().split('T')[0]}
-                  className="mt-1 h-10 w-full rounded-lg border border-violet-100 px-3 text-sm"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="calendar-blocked-reason"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Reason (optional)
-                </label>
-                <input
-                  id="calendar-blocked-reason"
-                  type="text"
-                  value={blockedDateForm.reason}
-                  onChange={(e) =>
-                    setBlockedDateForm((current) => ({
-                      ...current,
-                      reason: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g., Maintenance, Holiday closure"
-                  maxLength={255}
-                  className="mt-1 h-10 w-full rounded-lg border border-violet-100 px-3 text-sm"
-                />
-              </div>
-            </div>
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBlockedDateModal(false)
-                  setBlockedDateForm({ blocked_date: '', reason: '' })
-                }}
-                disabled={isCreatingBlockedDate}
-                className="rounded-lg border border-violet-200 px-4 py-2 text-sm font-semibold hover:bg-violet-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleCreateBlockedDate()}
-                disabled={
-                  isCreatingBlockedDate || !blockedDateForm.blocked_date.trim()
-                }
-                className="rounded-lg bg-paec-orange px-4 py-2 text-sm font-semibold text-white hover:bg-paec-orange-light disabled:opacity-50"
-              >
-                {isCreatingBlockedDate ? 'Adding…' : 'Block Date'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <BlockDateRangeModal
+        open={showBlockedDateModal}
+        activityId={activityId}
+        onClose={() => setShowBlockedDateModal(false)}
+        onBlocked={fetchBlockedDates}
+      />
     </div>
   )
 }

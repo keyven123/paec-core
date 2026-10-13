@@ -1,7 +1,11 @@
 export type TicketType = {
   id: string
   name: string
+  /** Unit price the customer pays, after the ticket's own discount. */
   price: number
+  /** Price before the ticket discount; set only when the ticket is discounted. */
+  originalPrice?: number
+  description?: string
 }
 
 export type AttractionLocation = {
@@ -23,6 +27,9 @@ export type Attraction = {
   categoryLabel: string
   price: number
   originalPrice?: number
+  discountPercent?: number
+  discountType?: 'percentage' | 'amount'
+  discountAmount?: number
   image: string
   showcaseImages?: string[]
   promo?: boolean
@@ -35,6 +42,7 @@ export type Attraction = {
   tags: string[]
   ticketTypes: TicketType[]
   todayCutoffTime?: string | null
+  contactEmail?: string | null
 }
 
 export type HeroSlide = {
@@ -46,6 +54,10 @@ export type HeroSlide = {
   subtitle: string
   location: string
   priceFrom: number
+  originalPrice?: number
+  discountPercent?: number
+  discountType?: 'percentage' | 'amount'
+  discountAmount?: number
   image: string
   featuredCard: {
     label: string
@@ -217,8 +229,15 @@ export const attractions: Attraction[] = [
     rating: 4.6,
     reviewCount: 178,
     description:
-      'Walk through centuries of Philippine history along cobblestone streets, Spanish-era fortifications, and beautifully restored heritage sites. Guided tours bring stories of Manila\'s past to life with immersive storytelling.',
-    tags: ['#heritage', '#history', '#culture', '#walking', '#intramuros', '#tour'],
+      "Walk through centuries of Philippine history along cobblestone streets, Spanish-era fortifications, and beautifully restored heritage sites. Guided tours bring stories of Manila's past to life with immersive storytelling.",
+    tags: [
+      '#heritage',
+      '#history',
+      '#culture',
+      '#walking',
+      '#intramuros',
+      '#tour',
+    ],
     ticketTypes: [
       { id: '3a', name: 'Guided Walking Tour', price: 350 },
       { id: '3b', name: 'Private Group Tour', price: 1200 },
@@ -289,7 +308,14 @@ export const attractions: Attraction[] = [
     reviewCount: 98,
     description:
       'A curated night market celebrating Filipino street food, global flavors, and local artisan vendors. Live music, pop-up kitchens, and themed food booths make every visit a delicious adventure.',
-    tags: ['#food', '#festival', '#streetfood', '#nightmarket', '#livemusic', '#local'],
+    tags: [
+      '#food',
+      '#festival',
+      '#streetfood',
+      '#nightmarket',
+      '#livemusic',
+      '#local',
+    ],
     ticketTypes: [
       { id: '6a', name: 'Entry Pass', price: 299 },
       { id: '6b', name: 'Food Tasting Bundle', price: 599 },

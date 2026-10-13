@@ -42,15 +42,15 @@ export function AttractionsSection({
   }, [activeCategory, filter, activities])
 
   return (
-    <section className="bg-white py-12 sm:py-16">
+    <section className="bg-white py-10 sm:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-paec-orange uppercase">
               <Sparkles className="size-3.5" />
               Attractions
             </p>
-            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
+            <h2 className="text-2xl font-bold text-foreground sm:text-4xl">
               Explore exciting{' '}
               <em className="text-paec-violet not-italic">activities</em>
             </h2>
@@ -60,12 +60,12 @@ export function AttractionsSection({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="scrollbar-hide -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             <button
               type="button"
               onClick={() => setFilter('promo')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
                 filter === 'promo'
                   ? 'border-paec-violet bg-paec-violet text-white'
                   : 'border-violet-100 bg-white text-foreground hover:bg-violet-50',
@@ -81,7 +81,7 @@ export function AttractionsSection({
               type="button"
               onClick={() => setFilter('new')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
                 filter === 'new'
                   ? 'border-paec-violet bg-paec-violet text-white'
                   : 'border-violet-100 bg-white text-foreground hover:bg-violet-50',
@@ -94,7 +94,7 @@ export function AttractionsSection({
               type="button"
               onClick={() => setFilter('all')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors',
                 filter === 'all'
                   ? 'bg-paec-violet text-white shadow-md'
                   : 'border border-violet-100 bg-white text-foreground hover:bg-violet-50',
@@ -111,7 +111,7 @@ export function AttractionsSection({
             <p className="text-muted-foreground">Loading activities…</p>
           </div>
         ) : filtered.length > 0 ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {filtered.map((attraction) => (
               <AttractionCard key={attraction.id} attraction={attraction} />
             ))}

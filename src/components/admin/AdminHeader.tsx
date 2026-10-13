@@ -20,7 +20,15 @@ export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
         <Menu className="size-5" />
       </button>
 
-      <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground sm:text-base">
+      <Link to="/admin/dashboard" className="min-w-0 flex-1 sm:hidden">
+        <img
+          src="/Paec-Logo.png"
+          alt="PAEC Admin"
+          className="h-8 w-auto object-contain"
+        />
+      </Link>
+
+      <p className="hidden min-w-0 flex-1 truncate text-sm text-muted-foreground sm:block sm:text-base">
         Welcome back,{' '}
         <span className="font-semibold text-foreground">{user.name}</span>
       </p>

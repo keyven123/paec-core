@@ -1,3 +1,4 @@
+import type { PaynamicsChannel } from '@/services/paymentGatewayService'
 import { api } from '@/lib/api'
 
 export type TempTransactionTicket = {
@@ -18,7 +19,7 @@ export type CreateTempTransactionData = {
   event_location_uuid?: string
   schedule_uuid?: string
   schedule_time_uuid?: string
-  tickets: TempTransactionTicket[]
+  tickets: Array<TempTransactionTicket>
   promo_code_uuid?: string
   affiliate_code?: string
 }
@@ -35,10 +36,51 @@ export type CheckoutFreePayload = {
   other_info?: Array<Record<string, string>>
 }
 
+export type PlacedTicket = {
+  uuid: string
+  event_ticket_uuid: string
+  ticket_number: string | null
+  qr_code: string | null
+  status: string
+  event_ticket?: { uuid: string; name: string } | null
+}
+
 export type CheckoutResponse = {
   success: boolean
-  transaction?: { uuid: string; order_number?: string }
-  tickets?: unknown[]
+  transaction?: {
+    uuid: string
+    order_number?: string
+    qr_code?: string | null
+    paid_at?: string | null
+  }
+  tickets?: Array<PlacedTicket>
+}
+
+export type GatewayCheckoutPayload = {
+  temp_transaction_uuid: string
+  payment_gateway_uuid: string
+  /** Required when the gateway is Paynamics. */
+  payment_channel?: PaynamicsChannel
+}
+
+export type GatewayCheckoutResponse = CheckoutResponse & {
+  redirect_url?: string
+  payment?: {
+    provider: string
+    status: string
+    checkout_url?: string | null
+    approval_url?: string | null
+  }
+}
+
+export type PaymentVerificationResponse = {
+  success: boolean
+  message?: string
+  payment_status?: string
+  transaction?: NonNullable<CheckoutResponse['transaction']> & {
+    payment_status?: string
+  }
+  tickets?: Array<PlacedTicket>
 }
 
 export type GuestCustomerDetails = {
@@ -102,11 +144,11 @@ export type CustomerTransaction = {
     code: string
     description?: string | null
   } | null
-  transaction_orders?: TransactionOrder[]
+  transaction_orders?: Array<TransactionOrder>
 }
 
 export type PaginatedCustomerTransactions = {
-  data: CustomerTransaction[]
+  data: Array<CustomerTransaction>
   meta: {
     current_page: number
     last_page: number
@@ -162,6 +204,54 @@ export const transactionService = {
       data,
     )
     return response
+  },
+
+  /** Starts a hosted payment through the activity's payment gateway. */
+  async checkout(
+    data: GatewayCheckoutPayload,
+  ): Promise<GatewayCheckoutResponse> {
+    const { data: response } = await api.post<GatewayCheckoutResponse>(
+      '/v1/customer/temp-transactions/checkout',
+      data,
+    )
+    return response
+  },
+
+  async guestCheckout(
+    data: GatewayCheckoutPayload & { email: string },
+  ): Promise<GatewayCheckoutResponse> {
+    const { data: response } = await api.post<GatewayCheckoutResponse>(
+      '/v1/public/temp-transactions/guest/checkout',
+      data,
+    )
+    return response
+  },
+
+  /** Verifies the payment with the gateway and issues the tickets once paid. */
+  async completePayment(
+    transactionUuid: string,
+    guestEmail?: string,
+  ): Promise<PaymentVerificationResponse> {
+    const { data } = await api.post<PaymentVerificationResponse>(
+      guestEmail
+        ? `/v1/public/transactions/${transactionUuid}/guest/complete`
+        : `/v1/customer/transactions/${transactionUuid}/complete`,
+      guestEmail ? { email: guestEmail } : {},
+    )
+    return data
+  },
+
+  async cancelPayment(
+    transactionUuid: string,
+    guestEmail?: string,
+  ): Promise<PaymentVerificationResponse> {
+    const { data } = await api.post<PaymentVerificationResponse>(
+      guestEmail
+        ? `/v1/public/transactions/${transactionUuid}/guest/cancel`
+        : `/v1/customer/transactions/${transactionUuid}/cancel`,
+      guestEmail ? { email: guestEmail } : {},
+    )
+    return data
   },
 
   async getMyTransactions(

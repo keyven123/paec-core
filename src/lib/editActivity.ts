@@ -1,5 +1,6 @@
 import type { AdminEvent } from '@/services/adminEventService'
 import type { EditActivityForm } from '@/types/editActivity'
+import { appendPaymentGatewayUuids } from '@/lib/createActivity'
 import { initialCreateActivityForm } from '@/types/createActivity'
 
 function slugify(value: string) {
@@ -56,6 +57,7 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
       uuid: image.uuid,
       url: image.url,
     })),
+    paymentGateways: event.payment_gateways ?? [],
     enableMetaPixel: !!event.track_event_meta,
     metaPixelId: event.meta_pixel_id ?? '',
     metaPixelAccessToken: event.meta_pixel_key ?? '',
@@ -91,6 +93,8 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
   form.showcaseImages.forEach((file, index) => {
     formData.append(`event_showcase[${index}]`, file)
   })
+
+  appendPaymentGatewayUuids(formData, form)
 
   formData.append(
     'enable_meta_pixel',

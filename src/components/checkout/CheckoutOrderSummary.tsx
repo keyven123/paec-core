@@ -1,7 +1,8 @@
 import { Calendar, MapPin, Tag, Ticket } from 'lucide-react'
 
-import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import type { CheckoutSession } from '@/lib/checkoutSession'
+import { ImageWithFallback } from '@/components/ui/image-with-fallback'
+import { getTicketCount } from '@/lib/checkoutSession'
 import { cn } from '@/lib/utils'
 
 type CheckoutOrderSummaryProps = {
@@ -13,6 +14,7 @@ export function CheckoutOrderSummary({
   session,
   className,
 }: CheckoutOrderSummaryProps) {
+  const ticketCount = getTicketCount(session)
   const visitLabel = session.visitDate
     ? new Date(session.visitDate).toLocaleDateString('en-PH', {
         weekday: 'short',
@@ -50,12 +52,23 @@ export function CheckoutOrderSummary({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              {session.ticketTypeName}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              ₱{session.unitPrice.toLocaleString()} × {session.quantity}
-            </p>
+            <ul className="space-y-1.5">
+              {session.tickets.map((line) => (
+                <li key={line.ticketTypeId}>
+                  <p className="text-sm font-semibold text-foreground">
+                    {line.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {line.originalUnitPrice ? (
+                      <span className="mr-1 line-through">
+                        ₱{line.originalUnitPrice.toLocaleString()}
+                      </span>
+                    ) : null}
+                    ₱{line.unitPrice.toLocaleString()} × {line.quantity}
+                  </p>
+                </li>
+              ))}
+            </ul>
             <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="size-3 shrink-0 text-paec-violet" />
               <span className="line-clamp-1">{session.location}</span>
@@ -83,7 +96,9 @@ export function CheckoutOrderSummary({
               <span className="inline-flex items-center gap-1 text-emerald-600">
                 <Tag className="size-3.5" />
                 Promo{' '}
-                <span className="font-mono text-xs">{session.appliedPromoCode.code}</span>
+                <span className="font-mono text-xs">
+                  {session.appliedPromoCode.code}
+                </span>
               </span>
               <span className="font-medium text-emerald-600">
                 −₱{session.promoDiscount.toLocaleString()}
@@ -99,7 +114,7 @@ export function CheckoutOrderSummary({
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
-            {session.quantity} ticket{session.quantity !== 1 ? 's' : ''}
+            {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
           </p>
         </div>
       </div>

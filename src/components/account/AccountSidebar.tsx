@@ -26,23 +26,92 @@ type AccountSidebarProps = {
 const navItems: {
   id: AccountSection
   label: string
+  shortLabel: string
   icon: typeof Ticket
   badge?: number
 }[] = [
-  { id: 'tickets', label: 'My Tickets', icon: Ticket },
-  { id: 'coupons', label: 'My Coupons', icon: Tag },
-  { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'tickets', label: 'My Tickets', shortLabel: 'Tickets', icon: Ticket },
+  { id: 'coupons', label: 'My Coupons', shortLabel: 'Coupons', icon: Tag },
+  {
+    id: 'transactions',
+    label: 'Transactions',
+    shortLabel: 'Transactions',
+    icon: ArrowLeftRight,
+  },
+  { id: 'profile', label: 'Profile', shortLabel: 'Profile', icon: User },
 ]
 
-export function AccountSidebar({
+export function AccountSidebar(props: AccountSidebarProps) {
+  return (
+    <>
+      <MobileAccountNav {...props} />
+      <DesktopAccountSidebar {...props} />
+    </>
+  )
+}
+
+function MobileAccountNav({
   user,
   activeSection,
   onSectionChange,
   onSignOut,
 }: AccountSidebarProps) {
   return (
-    <aside className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm lg:hidden">
+      <div className="flex items-center gap-3 bg-gradient-to-br from-paec-violet to-paec-violet-dark px-4 py-4">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-paec-orange text-sm font-bold text-white ring-2 ring-white/25">
+          {user.initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+          <p className="truncate text-xs text-white/75">{user.email}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+          aria-label="Sign out"
+        >
+          <LogOut className="size-4" />
+        </button>
+      </div>
+
+      <nav className="grid grid-cols-4 gap-1 p-1.5" aria-label="Account sections">
+        {navItems.map((item) => {
+          const Icon = item.icon
+          const isActive = activeSection === item.id
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSectionChange(item.id)}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-medium transition-colors',
+                isActive
+                  ? 'bg-violet-50 text-paec-violet'
+                  : 'text-muted-foreground hover:bg-violet-50/60 hover:text-foreground',
+              )}
+            >
+              <Icon className="size-[18px] shrink-0" />
+              <span className="w-full truncate text-center">{item.shortLabel}</span>
+            </button>
+          )
+        })}
+      </nav>
+    </div>
+  )
+}
+
+function DesktopAccountSidebar({
+  user,
+  activeSection,
+  onSectionChange,
+  onSignOut,
+}: AccountSidebarProps) {
+  return (
+    <aside className="hidden self-start overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm lg:block">
       <div className="bg-paec-violet px-5 py-6">
         <div className="flex items-start gap-3">
           <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-paec-orange text-sm font-bold text-white">
