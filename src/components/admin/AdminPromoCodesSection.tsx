@@ -1,7 +1,7 @@
 import {
   Calendar,
   ChevronDown,
-  Infinity,
+  Infinity as InfinityIcon,
   Loader2,
   Plus,
   Search,
@@ -403,7 +403,7 @@ function PromoCodeRow({
       <td className="px-3 py-2.5">
         {promo.is_unlimited ? (
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Infinity className="size-3.5" />
+            <InfinityIcon className="size-3.5" />
             Unlimited
           </span>
         ) : (
