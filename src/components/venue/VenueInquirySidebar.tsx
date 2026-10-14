@@ -1,5 +1,4 @@
 import {
-  CalendarDays,
   CheckCircle2,
   Loader2,
   Mail,
@@ -9,11 +8,12 @@ import {
   User,
   Users,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { LucideIcon } from 'lucide-react'
 import type { FormEvent, InputHTMLAttributes } from 'react'
 
+import { VisitDatePicker } from '@/components/ui/visit-date-picker'
 import { getApiErrorMessage, getApiValidationErrors } from '@/lib/api'
 import { getStoredUser, isCustomerAuthenticated } from '@/lib/auth'
 import { cn } from '@/lib/utils'
@@ -120,6 +120,7 @@ export function VenueInquirySidebar({
   const [submitting, setSubmitting] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [unavailableDates, setUnavailableDates] = useState<Map<string, string>>(new Map())
+  const blockedDates = useMemo(() => [...unavailableDates.keys()], [unavailableDates])
 
   useEffect(() => {
     let cancelled = false
@@ -184,8 +185,8 @@ export function VenueInquirySidebar({
   }
 
   return (
-    <aside className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-lg">
-      <div className="bg-paec-violet px-5 py-4 text-white">
+    <aside className="rounded-2xl border border-violet-100 bg-white shadow-lg">
+      <div className="rounded-t-2xl bg-paec-violet px-5 py-4 text-white">
         <div className="flex items-center gap-2 text-[11px] font-semibold tracking-widest uppercase">
           <MessageSquareText className="size-3.5" />
           Get Inquire
@@ -274,16 +275,35 @@ export function VenueInquirySidebar({
             maxLength={255}
           />
 
-          <InquiryField
-            label="Event date"
-            icon={CalendarDays}
-            error={errors.eventDate}
-            hint={form.eventDate ? formatLongDate(form.eventDate) : undefined}
-            type="date"
-            min={todayIso()}
-            value={form.eventDate}
-            onChange={(e) => update('eventDate', e.target.value)}
-          />
+          <div className="min-w-0">
+            <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
+              Event date <span className="text-red-500">*</span>
+            </span>
+            <VisitDatePicker
+              label=""
+              ariaLabel="Event date"
+              value={form.eventDate}
+              onChange={(value) => update('eventDate', value)}
+              blockedDates={blockedDates}
+              onRejectedDate={(reason) =>
+                setErrors((current) => ({
+                  ...current,
+                  eventDate:
+                    reason === 'blocked'
+                      ? 'This date is not available. Please choose another date.'
+                      : 'Choose a date from today onwards.',
+                }))
+              }
+              triggerClassName={cn(
+                errors.eventDate && 'border-red-300 focus:border-red-400 focus:ring-red-100',
+              )}
+            />
+            {errors.eventDate ? (
+              <span className="mt-1 block text-xs text-red-600">{errors.eventDate}</span>
+            ) : form.eventDate ? (
+              <span className="mt-1 block text-xs text-muted-foreground">{formatLongDate(form.eventDate)}</span>
+            ) : null}
+          </div>
 
           <InquiryField
             label="Number of guests (pax)"

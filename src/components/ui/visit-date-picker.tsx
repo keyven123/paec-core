@@ -35,6 +35,7 @@ type VisitDatePickerProps = {
   value: string
   onChange: (value: string) => void
   label?: string
+  ariaLabel?: string
   blockedDates?: string[]
   todayCutoffTime?: string | null
   minDate?: Date
@@ -77,6 +78,7 @@ export function VisitDatePicker({
   value,
   onChange,
   label = 'Date of Visit',
+  ariaLabel,
   blockedDates = [],
   todayCutoffTime,
   minDate,
@@ -199,7 +201,7 @@ export function VisitDatePicker({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label={label || 'Date of visit'}
+        aria-label={ariaLabel ?? (label || 'Date of visit')}
         className={cn(
           'flex h-11 w-full items-center rounded-xl border border-violet-100 bg-white px-3 text-left text-sm transition-colors',
           'focus:border-paec-violet focus:ring-2 focus:ring-paec-violet/20 focus:outline-none',

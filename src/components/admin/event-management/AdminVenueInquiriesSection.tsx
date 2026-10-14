@@ -80,6 +80,25 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<VenueInquiry | null>(null)
+  const [unviewedCount, setUnviewedCount] = useState(0)
+
+  const setViewedAt = (uuid: string, viewedAt: string | null) => {
+    setInquiries((current) =>
+      current.map((item) => (item.uuid === uuid ? { ...item, viewed_at: viewedAt } : item)),
+    )
+  }
+
+  const openInquiry = (inquiry: VenueInquiry) => {
+    setSelected(inquiry)
+    if (inquiry.viewed_at) return
+
+    setViewedAt(inquiry.uuid, new Date().toISOString())
+    setUnviewedCount((count) => Math.max(0, count - 1))
+    venueListingService.markInquiryViewed(inquiry.uuid).catch(() => {
+      setViewedAt(inquiry.uuid, null)
+      setUnviewedCount((count) => count + 1)
+    })
+  }
 
   useEffect(() => {
     venueListingService
@@ -109,6 +128,7 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
         if (cancelled) return
         setInquiries(result.data)
         setMeta(result.meta)
+        setUnviewedCount(result.status_counts.unviewed ?? 0)
       })
       .catch((err: unknown) => {
         if (!cancelled) toast.error(getApiErrorMessage(err, 'Failed to load inquiries.'))
@@ -139,8 +159,14 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-foreground sm:text-2xl lg:text-3xl">Inquiries</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               All customer inquiries{venue ? ` · ${venue.name}` : ''}
+              {unviewedCount > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-paec-orange ring-1 ring-orange-200">
+                  <span className="size-1.5 rounded-full bg-paec-orange" />
+                  {unviewedCount} new
+                </span>
+              ) : null}
             </p>
           </div>
 
@@ -179,13 +205,16 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
                 <li key={inquiry.uuid}>
                   <button
                     type="button"
-                    onClick={() => setSelected(inquiry)}
-                    className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-left transition-colors hover:bg-violet-50/40"
+                    onClick={() => openInquiry(inquiry)}
+                    className={cn(
+                      'flex w-full flex-col gap-1.5 border-l-[3px] px-4 py-3.5 text-left transition-colors',
+                      isUnviewed(inquiry)
+                        ? 'border-l-paec-orange bg-violet-50/60 hover:bg-violet-50'
+                        : 'border-l-transparent hover:bg-violet-50/40',
+                    )}
                   >
                     <div className="flex w-full items-start justify-between gap-2">
-                      <p className="min-w-0 truncate text-sm font-semibold text-foreground">
-                        {inquiry.full_name ?? 'Guest'}
-                      </p>
+                      <InquiryName inquiry={inquiry} />
                       <InquiryStatusBadge status={inquiry.status} label={inquiry.status_label} />
                     </div>
                     <ContactLine inquiry={inquiry} />
@@ -222,11 +251,19 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
                   {inquiries.map((inquiry) => (
                     <tr
                       key={inquiry.uuid}
-                      onClick={() => setSelected(inquiry)}
-                      className="cursor-pointer border-b border-violet-50 transition-colors last:border-0 hover:bg-violet-50/40"
+                      onClick={() => openInquiry(inquiry)}
+                      className={cn(
+                        'cursor-pointer border-b border-violet-50 transition-colors last:border-0',
+                        isUnviewed(inquiry) ? 'bg-violet-50/60 hover:bg-violet-50' : 'hover:bg-violet-50/40',
+                      )}
                     >
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-foreground">{inquiry.full_name ?? 'Guest'}</p>
+                      <td
+                        className={cn(
+                          'border-l-[3px] px-4 py-3',
+                          isUnviewed(inquiry) ? 'border-l-paec-orange' : 'border-l-transparent',
+                        )}
+                      >
+                        <InquiryName inquiry={inquiry} />
                         {inquiry.event_type ? (
                           <p className="text-xs text-muted-foreground">{inquiry.event_type}</p>
                         ) : null}
@@ -241,7 +278,12 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
                       <td className="px-4 py-3">
                         <InquiryStatusBadge status={inquiry.status} label={inquiry.status_label} />
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                      <td
+                        className={cn(
+                          'px-4 py-3 whitespace-nowrap',
+                          isUnviewed(inquiry) ? 'font-semibold text-foreground' : 'text-muted-foreground',
+                        )}
+                      >
                         {formatDate(inquiry.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -297,6 +339,24 @@ export function AdminVenueInquiriesSection({ venueId }: { venueId: string }) {
         />
       ) : null}
     </div>
+  )
+}
+
+function isUnviewed(inquiry: VenueInquiry) {
+  return !inquiry.viewed_at
+}
+
+function InquiryName({ inquiry }: { inquiry: VenueInquiry }) {
+  const unviewed = isUnviewed(inquiry)
+  return (
+    <p className="flex min-w-0 items-center gap-2 text-sm text-foreground">
+      {unviewed ? (
+        <span className="size-2 shrink-0 rounded-full bg-paec-orange" aria-label="Not opened yet" />
+      ) : null}
+      <span className={cn('truncate', unviewed ? 'font-bold' : 'font-semibold')}>
+        {inquiry.full_name ?? 'Guest'}
+      </span>
+    </p>
   )
 }
 

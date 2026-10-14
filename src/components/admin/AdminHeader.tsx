@@ -6,18 +6,26 @@ import type { AdminUser } from '@/lib/adminAuth'
 type AdminHeaderProps = {
   user: AdminUser
   onMenuClick?: () => void
+  hasMenuAlert?: boolean
 }
 
-export function AdminHeader({ user, onMenuClick }: AdminHeaderProps) {
+export function AdminHeader({
+  user,
+  onMenuClick,
+  hasMenuAlert = false,
+}: AdminHeaderProps) {
   return (
     <header className="flex shrink-0 items-center gap-3 border-b border-violet-100 bg-white px-3 py-3 sm:gap-4 sm:px-6 lg:px-8">
       <button
         type="button"
         onClick={onMenuClick}
-        className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-violet-100 text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground lg:hidden"
-        aria-label="Open menu"
+        className="relative flex size-9 shrink-0 items-center justify-center rounded-lg border border-violet-100 text-muted-foreground transition-colors hover:bg-violet-50 hover:text-foreground lg:hidden"
+        aria-label={hasMenuAlert ? 'Open menu (new inquiries)' : 'Open menu'}
       >
         <Menu className="size-5" />
+        {hasMenuAlert ? (
+          <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-paec-orange ring-2 ring-white" />
+        ) : null}
       </button>
 
       <Link to="/admin/dashboard" className="min-w-0 flex-1 sm:hidden">

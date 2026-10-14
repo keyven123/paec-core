@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import type { ReactNode } from 'react'
 import type {
   PaginationMeta,
   VenueListing,
@@ -164,6 +165,7 @@ export function AdminEventManagementSection() {
       value: (stats?.total_inquiries ?? 0).toLocaleString('en-US'),
       icon: MessageSquare,
       iconClass: 'bg-orange-100 text-paec-orange',
+      newCount: stats?.new_inquiries ?? 0,
     },
   ]
 
@@ -213,7 +215,14 @@ export function AdminEventManagementSection() {
                 <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
                   {stat.label}
                 </p>
-                <p className="text-lg font-bold text-foreground">{stat.value}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-bold text-foreground">
+                    {stat.value}
+                  </p>
+                  {'newCount' in stat && stat.newCount ? (
+                    <NewInquiryPill count={stat.newCount} />
+                  ) : null}
+                </div>
               </div>
             </div>
           )
@@ -293,14 +302,17 @@ export function AdminEventManagementSection() {
                       </div>
                       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
                         <MobileStat label="Location" value={listing.city} />
-                        <MobileStat label="Capacity" value={formatCapacity(listing)} />
+                        <MobileStat
+                          label="Capacity"
+                          value={formatCapacity(listing)}
+                        />
                         <MobileStat
                           label="From / event"
                           value={formatPeso(listing.price_per_event)}
                         />
                         <MobileStat
                           label="Inquiries"
-                          value={String(listing.inquiries_count)}
+                          value={<InquiryCount listing={listing} />}
                         />
                       </dl>
                     </div>
@@ -385,8 +397,8 @@ export function AdminEventManagementSection() {
                     <td className="px-4 py-3 text-xs font-medium whitespace-nowrap text-foreground">
                       {formatPeso(listing.price_per_event)}
                     </td>
-                    <td className="px-4 py-3 text-xs text-foreground">
-                      {listing.inquiries_count}
+                    <td className="px-4 py-3">
+                      <InquiryCount listing={listing} />
                     </td>
                     <td className="px-4 py-3 text-xs whitespace-nowrap text-muted-foreground">
                       {formatUpdated(listing.updated_at)}
@@ -459,11 +471,57 @@ export function AdminEventManagementSection() {
   )
 }
 
-function MobileStat({ label, value }: { label: string; value: string }) {
+function MobileStat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="truncate font-medium text-foreground">{value}</dd>
+    </div>
+  )
+}
+
+function NewInquiryPill({
+  count,
+  className,
+}: {
+  count: number
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-paec-orange ring-1 ring-orange-200',
+        className,
+      )}
+    >
+      <span className="relative flex size-1.5">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-paec-orange opacity-75" />
+        <span className="relative inline-flex size-1.5 rounded-full bg-paec-orange" />
+      </span>
+      {count} new
+    </span>
+  )
+}
+
+function InquiryCount({ listing }: { listing: VenueListing }) {
+  const total = listing.inquiries_count
+  const fresh = listing.new_inquiries_count ?? 0
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        title={`${total} ${total === 1 ? 'inquiry' : 'inquiries'} in total`}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums',
+          total > 0
+            ? 'bg-violet-50 text-paec-violet'
+            : 'bg-slate-50 text-muted-foreground',
+        )}
+      >
+        <MessageSquare className="size-3" />
+        {total}
+      </span>
+      {fresh > 0 ? <NewInquiryPill count={fresh} /> : null}
     </div>
   )
 }

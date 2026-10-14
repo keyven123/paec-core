@@ -53,10 +53,26 @@ export const VENUE_SETUP_OPTIONS: Array<VenueSetup> = [
 export const VENUE_SPEC_FIELDS = [
   { key: 'floor_area', label: 'Floor area', placeholder: '800 sqm' },
   { key: 'ceiling_height', label: 'Ceiling height', placeholder: '6.5 m' },
-  { key: 'parking_slots', label: 'Parking slots', placeholder: '120 (basement + valet)' },
-  { key: 'power_supply', label: 'Power supply', placeholder: '200 kVA · 3-phase' },
-  { key: 'load_in_access', label: 'Load-in access', placeholder: '2 freight elevators · ramp' },
-  { key: 'curfew', label: 'Curfew', placeholder: '2:00 AM (extensions available)' },
+  {
+    key: 'parking_slots',
+    label: 'Parking slots',
+    placeholder: '120 (basement + valet)',
+  },
+  {
+    key: 'power_supply',
+    label: 'Power supply',
+    placeholder: '200 kVA · 3-phase',
+  },
+  {
+    key: 'load_in_access',
+    label: 'Load-in access',
+    placeholder: '2 freight elevators · ramp',
+  },
+  {
+    key: 'curfew',
+    label: 'Curfew',
+    placeholder: '2:00 AM (extensions available)',
+  },
 ] as const
 
 export const VENUE_AMENITY_OPTIONS = [
@@ -121,6 +137,8 @@ export type VenueListing = {
   status: VenueListingStatus
   is_featured: boolean
   inquiries_count: number
+  /** Inquiries still in "new" status; only present on the admin listing. */
+  new_inquiries_count?: number
   bookings_count: number
   featured_image_url: string | null
   featured_upload_uuid: string | null
@@ -146,11 +164,15 @@ export type VenueListingDetail = VenueListing & {
   }
 }
 
+/** Fired after an inquiry is opened so new-inquiry badges can refresh. */
+export const VENUE_INQUIRY_VIEWED_EVENT = 'paec:venue-inquiry-viewed'
+
 export type VenueListingStats = {
   total: number
   published: number
   pending: number
   total_inquiries: number
+  new_inquiries: number
 }
 
 export type VenueInquiry = {
@@ -163,6 +185,8 @@ export type VenueInquiry = {
   guest_count: number | null
   status: string
   status_label: string
+  /** When the venue team first opened it; null means it is still new. */
+  viewed_at?: string | null
   message: string | null
   site_visit_label?: string | null
   visit_scheduled_label?: string | null
@@ -271,14 +295,22 @@ export const venueListingService = {
   ): Promise<{
     data: Array<VenueInquiry>
     meta: PaginationMeta
-    status_counts: Record<string, number>
+    status_counts: Partial<Record<string, number>>
   }> {
     const { data } = await adminApi.get<{
       data: Array<VenueInquiry>
       meta: PaginationMeta
-      status_counts: Record<string, number>
+      status_counts: Partial<Record<string, number>>
     }>(`/v1/venue-listings/${uuid}/inquiries`, { params })
     return data
+  },
+
+  async markInquiryViewed(inquiryUuid: string): Promise<VenueInquiry> {
+    const { data } = await adminApi.post<{ data: VenueInquiry }>(
+      `/v1/venue-listings/inquiries/${inquiryUuid}/viewed`,
+    )
+    window.dispatchEvent(new Event(VENUE_INQUIRY_VIEWED_EVENT))
+    return data.data
   },
 
   async listPublic(limit = 8): Promise<Array<PublicVenueListing>> {
@@ -296,14 +328,19 @@ export const venueListingService = {
     return data.data
   },
 
-  async listPublicUnavailableDates(slug: string): Promise<Array<UnavailableVenueDate>> {
+  async listPublicUnavailableDates(
+    slug: string,
+  ): Promise<Array<UnavailableVenueDate>> {
     const { data } = await api.get<{ data: Array<UnavailableVenueDate> }>(
       `/v1/public/venue-listings/${encodeURIComponent(slug)}/blocked-dates`,
     )
     return data.data
   },
 
-  async submitInquiry(slug: string, payload: VenueInquiryPayload): Promise<void> {
+  async submitInquiry(
+    slug: string,
+    payload: VenueInquiryPayload,
+  ): Promise<void> {
     await api.post(
       `/v1/public/venue-listings/${encodeURIComponent(slug)}/inquiries`,
       payload,
@@ -383,10 +420,12 @@ export function formatPeso(amount: number | null | undefined): string {
   })}`
 }
 
-export function formatCapacity(listing: Pick<
-  VenueListing,
-  'capacity_label' | 'capacity_min' | 'capacity_max'
->): string {
+export function formatCapacity(
+  listing: Pick<
+    VenueListing,
+    'capacity_label' | 'capacity_min' | 'capacity_max'
+  >,
+): string {
   if (listing.capacity_min && listing.capacity_max) {
     return `${listing.capacity_min}–${listing.capacity_max} pax`
   }

@@ -21,6 +21,7 @@ type AdminSidebarProps = {
   onSignOut: () => void
   onNavigate?: () => void
   onClose?: () => void
+  newInquiryCount?: number
   className?: string
 }
 
@@ -41,6 +42,7 @@ export function AdminSidebar({
   onSignOut,
   onNavigate,
   onClose,
+  newInquiryCount = 0,
   className,
 }: AdminSidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -105,7 +107,20 @@ export function AdminSidebar({
                   isActive ? 'text-white' : 'text-muted-foreground',
                 )}
               />
-              {item.label}
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {item.to === '/admin/event-management' && newInquiryCount > 0 ? (
+                <span
+                  title={`${newInquiryCount} new ${newInquiryCount === 1 ? 'inquiry' : 'inquiries'}`}
+                  className={cn(
+                    'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums',
+                    isActive
+                      ? 'bg-white text-paec-violet'
+                      : 'bg-paec-orange text-white',
+                  )}
+                >
+                  {newInquiryCount > 99 ? '99+' : newInquiryCount}
+                </span>
+              ) : null}
             </Link>
           )
         })}
@@ -120,7 +135,9 @@ export function AdminSidebar({
             <p className="truncate text-sm font-medium text-foreground">
               {user.name}
             </p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
           </div>
           <button
             type="button"
