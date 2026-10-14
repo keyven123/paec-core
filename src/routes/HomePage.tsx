@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import type { Attraction } from '@/data/mockAttractions'
+import type { PublicVenueListing } from '@/services/venueListingService'
 import { AttractionsSection } from '@/components/home/AttractionsSection'
 import { CategorySection } from '@/components/home/CategorySection'
 import { EventManagementSection } from '@/components/home/EventManagementSection'
@@ -7,20 +9,24 @@ import { HeroSection } from '@/components/home/HeroSection'
 import { PromotionSection } from '@/components/home/PromotionSection'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
-import type { Attraction } from '@/data/mockAttractions'
-import type { PublicVenueListing } from '@/services/venueListingService'
+import {
+  ALL_CATEGORIES,
+  buildActivityCategories,
+} from '@/lib/activityCategories'
 import {
   buildHeroSlides,
-  mergeCatalogActivities,
   marketplaceService,
+  mergeCatalogActivities,
 } from '@/services/marketplaceService'
 import { venueListingService } from '@/services/venueListingService'
 
 export function HomePage() {
-  const [activeCategory, setActiveCategory] = useState('all')
-  const [activities, setActivities] = useState<Attraction[]>([])
-  const [featuredActivities, setFeaturedActivities] = useState<Attraction[]>([])
-  const [promoActivities, setPromoActivities] = useState<Attraction[]>([])
+  const [activeCategory, setActiveCategory] = useState(ALL_CATEGORIES)
+  const [activities, setActivities] = useState<Array<Attraction>>([])
+  const [featuredActivities, setFeaturedActivities] = useState<
+    Array<Attraction>
+  >([])
+  const [promoActivities, setPromoActivities] = useState<Array<Attraction>>([])
   const [venues, setVenues] = useState<Array<PublicVenueListing>>([])
   const [loading, setLoading] = useState(true)
 
@@ -66,6 +72,15 @@ export function HomePage() {
     [activities, featuredActivities],
   )
 
+  const categoryOptions = useMemo(
+    () => buildActivityCategories(catalogActivities),
+    [catalogActivities],
+  )
+
+  const selectedCategory = categoryOptions.some((c) => c.id === activeCategory)
+    ? activeCategory
+    : ALL_CATEGORIES
+
   const heroSlides = useMemo(() => {
     const source =
       featuredActivities.length > 0 ? featuredActivities : catalogActivities
@@ -78,11 +93,13 @@ export function HomePage() {
       <main>
         <HeroSection slides={heroSlides} loading={loading} />
         <CategorySection
-          activeCategory={activeCategory}
+          categories={categoryOptions}
+          activeCategory={selectedCategory}
           onCategoryChange={setActiveCategory}
+          loading={loading}
         />
         <AttractionsSection
-          activeCategory={activeCategory}
+          activeCategory={selectedCategory}
           activities={catalogActivities}
           loading={loading}
         />

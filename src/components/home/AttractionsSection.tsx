@@ -1,13 +1,14 @@
 import { Sparkles, Star, Tag } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import type { Attraction } from '@/data/mockAttractions'
 import { AttractionCard } from '@/components/home/AttractionCard'
-import { categories, type Attraction } from '@/data/mockAttractions'
+import { ALL_CATEGORIES } from '@/lib/activityCategories'
 import { cn } from '@/lib/utils'
 
 type AttractionsSectionProps = {
   activeCategory: string
-  activities: Attraction[]
+  activities: Array<Attraction>
   loading?: boolean
 }
 
@@ -23,11 +24,8 @@ export function AttractionsSection({
   const filtered = useMemo(() => {
     let list = activities
 
-    if (activeCategory !== 'all') {
-      const cat = categories.find((c) => c.id === activeCategory)
-      if (cat) {
-        list = list.filter((a) => a.category === cat.label)
-      }
+    if (activeCategory !== ALL_CATEGORIES) {
+      list = list.filter((a) => a.category === activeCategory)
     }
 
     if (filter === 'promo') {
