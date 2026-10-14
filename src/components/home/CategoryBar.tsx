@@ -51,43 +51,47 @@ export function CategoryBar({
 
       <div
         ref={scrollRef}
-        className="scrollbar-hide flex flex-1 gap-2 overflow-x-auto py-1"
-        role="tablist"
-        aria-label="Activity categories"
+        className="scrollbar-hide flex-1 overflow-x-auto py-1"
       >
-        {loading
-          ? Array.from({ length: 6 }, (_, i) => (
-              <div
-                key={i}
-                className="h-[3.75rem] w-28 shrink-0 animate-pulse rounded-xl bg-violet-50"
-              />
-            ))
-          : categories.map((cat) => {
-              const isActive = active === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => onChange(cat.id)}
-                  title={`${cat.label} · ${cat.count} ${cat.count === 1 ? 'activity' : 'activities'}`}
-                  className={cn(
-                    'flex shrink-0 flex-col items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-medium transition-all',
-                    variant === 'hero'
-                      ? isActive
-                        ? 'bg-paec-violet text-white shadow-lg'
-                        : 'bg-white/90 text-foreground hover:bg-white'
-                      : isActive
-                        ? 'bg-paec-violet text-white shadow-md'
-                        : 'border border-violet-100 bg-white text-foreground hover:border-paec-violet/30 hover:bg-violet-50',
-                  )}
-                >
-                  <span className="text-base leading-none">{cat.icon}</span>
-                  <span className="whitespace-nowrap">{cat.label}</span>
-                </button>
-              )
-            })}
+        <div
+          className="mx-auto flex w-max gap-2"
+          role="tablist"
+          aria-label="Activity categories"
+        >
+          {loading
+            ? Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-[3.75rem] w-28 shrink-0 animate-pulse rounded-xl bg-violet-50"
+                />
+              ))
+            : categories.map((cat) => {
+                const isActive = active === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => onChange(cat.id)}
+                    title={`${cat.label} · ${cat.count} ${cat.count === 1 ? 'activity' : 'activities'}`}
+                    className={cn(
+                      'flex shrink-0 flex-col items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-medium transition-all',
+                      variant === 'hero'
+                        ? isActive
+                          ? 'bg-paec-violet text-white shadow-lg'
+                          : 'bg-white/90 text-foreground hover:bg-white'
+                        : isActive
+                          ? 'bg-paec-violet text-white shadow-md'
+                          : 'border border-violet-100 bg-white text-foreground hover:border-paec-violet/30 hover:bg-violet-50',
+                    )}
+                  >
+                    <span className="text-base leading-none">{cat.icon}</span>
+                    <span className="whitespace-nowrap">{cat.label}</span>
+                  </button>
+                )
+              })}
+        </div>
       </div>
 
       <button
