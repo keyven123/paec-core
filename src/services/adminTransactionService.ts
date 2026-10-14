@@ -5,6 +5,7 @@ export type AdminTransaction = {
   order_number: string
   total_amount: number | string
   payment_provider?: string | null
+  paybiz_wallet_id?: string | null
   payment_status: string
   order_status: string
   paid_at?: string | null
@@ -80,7 +81,7 @@ export type AdminTransactionDetail = AdminTransaction & {
 }
 
 type Paginated<T> = {
-  data: T[]
+  data: Array<T>
   meta: {
     total: number
     current_page: number
@@ -114,14 +115,19 @@ export const adminTransactionService = {
     }
     if (filters.payment_status) params.payment_status = filters.payment_status
     if (filters.event_uuid) params.event_uuid = filters.event_uuid
-    if (filters.organization_uuid) params.organization_uuid = filters.organization_uuid
+    if (filters.organization_uuid)
+      params.organization_uuid = filters.organization_uuid
     if (filters.user_uuid) params.user_uuid = filters.user_uuid
-    if (filters.visit_start_date) params.visit_start_date = filters.visit_start_date
+    if (filters.visit_start_date)
+      params.visit_start_date = filters.visit_start_date
     if (filters.visit_end_date) params.visit_end_date = filters.visit_end_date
 
-    const { data } = await adminApi.get<Paginated<AdminTransaction>>('/v1/transactions', {
-      params,
-    })
+    const { data } = await adminApi.get<Paginated<AdminTransaction>>(
+      '/v1/transactions',
+      {
+        params,
+      },
+    )
 
     return data
   },

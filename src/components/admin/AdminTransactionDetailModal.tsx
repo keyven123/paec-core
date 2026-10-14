@@ -285,6 +285,16 @@ export function AdminTransactionDetailModal({
                   <InfoRow label="Reference" mono>
                     {transaction.payment_id}
                   </InfoRow>
+                  <InfoRow
+                    label="Wallet ID"
+                    mono={!!transaction.paybiz_wallet_id}
+                  >
+                    {transaction.paybiz_wallet_id ?? (
+                      <span className="font-normal text-muted-foreground">
+                        N/A
+                      </span>
+                    )}
+                  </InfoRow>
                   <InfoRow label="Created">
                     {formatDateTime(transaction.created_at)}
                   </InfoRow>

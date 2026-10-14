@@ -21,6 +21,7 @@ import type { PaynamicsChannel } from '@/services/paymentGatewayService'
 import { SignInModal } from '@/components/auth/SignInModal'
 import { CheckoutGuestForm } from '@/components/checkout/CheckoutGuestForm'
 import { CheckoutOrderSummary } from '@/components/checkout/CheckoutOrderSummary'
+import { CheckoutPaymentUnavailable } from '@/components/checkout/CheckoutPaymentUnavailable'
 import {
   CheckoutPaymentMethods,
   availablePaynamicsChannels,
@@ -197,8 +198,12 @@ export function CheckoutPage() {
       session.total > 0
         ? paymentGateways?.find((item) => item.uuid === selectedGatewayUuid)
         : undefined
-    if (paymentGateways?.length && session.total > 0 && !gateway) {
-      toast.error('Please select a payment method')
+    if (session.total > 0 && !gateway) {
+      toast.error(
+        paymentGateways?.length
+          ? 'Please select a payment method'
+          : 'Payment is not available for this activity yet',
+      )
       return
     }
     if (
@@ -408,6 +413,8 @@ export function CheckoutPage() {
                 paying={paying}
                 onPay={() => void handlePay()}
               />
+            ) : session.total > 0 ? (
+              <CheckoutPaymentUnavailable attractionId={session.attractionId} />
             ) : (
               <section className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
                 <div className="border-b border-violet-100 px-5 py-4">
@@ -423,11 +430,10 @@ export function CheckoutPage() {
                   <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-4 py-6 text-center">
                     <ShieldCheck className="mx-auto size-8 text-paec-violet/50" />
                     <p className="mt-3 text-sm font-medium text-foreground">
-                      No online payment needed for now
+                      This booking is free
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Your booking is confirmed and your tickets are issued
-                      right away.
+                      Your tickets are issued as soon as you confirm.
                     </p>
 
                     <Button
@@ -438,8 +444,8 @@ export function CheckoutPage() {
                         'mt-4 h-11 min-w-[140px] rounded-xl bg-paec-violet px-8 text-sm font-semibold hover:bg-paec-violet-dark',
                       )}
                     >
-                      <CreditCard className="size-4" />
-                      {paying ? 'Processing…' : 'Pay'}
+                      <CheckCircle2 className="size-4" />
+                      {paying ? 'Processing…' : 'Confirm booking'}
                     </Button>
                   </div>
                 </div>

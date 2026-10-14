@@ -34,6 +34,7 @@ type PaymentGatewayForm = {
   apiUsername: string
   apiPassword: string
   paymentChannels: Array<PaynamicsChannel>
+  paybizWalletId: string
   status: PaymentGatewayStatus
 }
 
@@ -48,8 +49,11 @@ const emptyForm: PaymentGatewayForm = {
   apiUsername: '',
   apiPassword: '',
   paymentChannels: PAYNAMICS_CHANNELS.map((channel) => channel.value),
+  paybizWalletId: '',
   status: 'active',
 }
+
+const PAYBIZ_WALLET_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
 const API_FIELD_MAP: Record<string, keyof PaymentGatewayForm> = {
   provider: 'provider',
@@ -60,6 +64,7 @@ const API_FIELD_MAP: Record<string, keyof PaymentGatewayForm> = {
   api_username: 'apiUsername',
   api_password: 'apiPassword',
   payment_channels: 'paymentChannels',
+  paybiz_wallet_id: 'paybizWalletId',
   status: 'status',
 }
 
@@ -78,6 +83,7 @@ function formFromGateway(gateway: PaymentGateway | null): PaymentGatewayForm {
     name: gateway.name,
     gatewayId: gateway.gateway_id,
     paymentChannels: gateway.payment_channels ?? emptyForm.paymentChannels,
+    paybizWalletId: gateway.paybiz_wallet_id ?? '',
     status: gateway.status,
   }
 }
@@ -182,6 +188,14 @@ export function PaymentGatewayFormModal({
       next.paymentChannels =
         'Select at least one payment option enabled on your Paynamics account.'
     }
+    const walletId = form.paybizWalletId.trim()
+    if (
+      needsApiCredentials &&
+      walletId &&
+      !PAYBIZ_WALLET_ID_PATTERN.test(walletId)
+    ) {
+      next.paybizWalletId = 'Use only letters, numbers, dashes and underscores.'
+    }
     return next
   }
 
@@ -204,6 +218,7 @@ export function PaymentGatewayFormModal({
             api_username: form.apiUsername.trim(),
             api_password: form.apiPassword.trim(),
             payment_channels: form.paymentChannels,
+            paybiz_wallet_id: form.paybizWalletId.trim(),
           }
         : {}),
       status: form.status,
@@ -484,6 +499,25 @@ export function PaymentGatewayFormModal({
                   </div>
                 ))}
               </div>
+            </FormField>
+          ) : null}
+
+          {needsApiCredentials ? (
+            <FormField
+              label="Paybiz Code / Wallet ID"
+              error={errors.paybizWalletId}
+              hint="Paybiz wallet that receives every payment through this gateway. Leave blank to settle to the merchant account."
+            >
+              <input
+                type="text"
+                value={form.paybizWalletId}
+                onChange={(e) => update({ paybizWalletId: e.target.value })}
+                placeholder="e.g. PBW-0001 (optional)"
+                maxLength={64}
+                className={cn(fieldClassName, 'font-mono')}
+                autoComplete="off"
+                spellCheck={false}
+              />
             </FormField>
           ) : null}
 

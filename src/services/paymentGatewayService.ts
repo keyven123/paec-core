@@ -146,6 +146,8 @@ export type PaymentGateway = {
   api_password_preview: string | null
   /** Paynamics channels enabled on the merchant account; null for other providers. */
   payment_channels: Array<PaynamicsChannel> | null
+  /** Paynamics Paybiz wallet that receives each sale; null settles to the merchant account. */
+  paybiz_wallet_id: string | null
   status: PaymentGatewayStatus
   created_at: string | null
   updated_at: string | null
@@ -185,6 +187,8 @@ export type CreatePaymentGatewayData = {
   api_username?: string
   api_password?: string
   payment_channels?: Array<PaynamicsChannel>
+  /** Optional Paynamics Paybiz wallet; blank clears it. */
+  paybiz_wallet_id?: string
   status: PaymentGatewayStatus
 }
 

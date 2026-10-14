@@ -127,6 +127,18 @@ function KeyPreview({ value }: { value: string | null }) {
   )
 }
 
+function PaybizWallet({ value }: { value: string | null }) {
+  if (!value) {
+    return <span className="text-[11px] text-muted-foreground">N/A</span>
+  }
+
+  return (
+    <code className="inline-block max-w-[220px] truncate rounded-md bg-orange-50 px-2 py-0.5 align-middle font-mono text-[11px] text-orange-700">
+      {value}
+    </code>
+  )
+}
+
 function formatUpdatedAt(value: string | null) {
   if (!value) return '—'
   return new Date(value).toLocaleString('en-PH', {
@@ -318,7 +330,7 @@ export function AdminPaymentGatewaysSection() {
                   'Environment',
                   'Payment ID',
                   'Public Key',
-                  'Secret Key',
+                  'Paybiz Code / Wallet ID',
                   'Last Updated',
                   'Status',
                   'Actions',
@@ -454,9 +466,9 @@ function PaymentGatewayCard({
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] text-muted-foreground uppercase">
-            {meta.secretKeyLabel}
+            Paybiz Code / Wallet ID
           </p>
-          <KeyPreview value={gateway.secret_key_preview} />
+          <PaybizWallet value={gateway.paybiz_wallet_id} />
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] text-muted-foreground uppercase">Updated</p>
@@ -522,7 +534,7 @@ function PaymentGatewayRow({
         <KeyPreview value={gateway.public_key_preview} />
       </td>
       <td className="px-3 py-2.5">
-        <KeyPreview value={gateway.secret_key_preview} />
+        <PaybizWallet value={gateway.paybiz_wallet_id} />
       </td>
       <td className="px-3 py-2.5 text-[11px] text-muted-foreground">
         {formatUpdatedAt(gateway.updated_at)}
