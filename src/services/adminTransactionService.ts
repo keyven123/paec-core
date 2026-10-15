@@ -1,3 +1,6 @@
+import { isAxiosError } from 'axios'
+import type { AxiosResponse } from 'axios'
+
 import { adminApi } from '@/lib/api'
 
 export type AdminTransaction = {
@@ -101,7 +104,70 @@ export type TransactionListFilters = {
   visit_end_date?: string
 }
 
+export type TransactionReportDateType = 'purchase' | 'visit'
+
+export type TransactionReportFilters = {
+  event_uuid?: string
+  order_status?: string
+  date_type: TransactionReportDateType
+  start_date?: string
+  end_date?: string
+}
+
+export type TransactionReportAttraction = { uuid: string; name: string }
+
+function downloadFileFromResponse(
+  response: AxiosResponse<Blob>,
+  defaultFilename: string,
+) {
+  const disposition = response.headers['content-disposition']
+  const match =
+    typeof disposition === 'string'
+      ? disposition.match(/filename="?([^";]+)"?/)
+      : null
+  const url = window.URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = match?.[1] ?? defaultFilename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
 export const adminTransactionService = {
+  async exportAttractions(): Promise<Array<TransactionReportAttraction>> {
+    const { data } = await adminApi.get<{
+      data: Array<TransactionReportAttraction>
+    }>('/v1/transactions/export/attractions')
+    return data.data
+  },
+
+  /** Downloads the transactions matching the filters as an Excel file. */
+  async exportReport(filters: TransactionReportFilters): Promise<void> {
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => Boolean(value)),
+    )
+
+    try {
+      const response = await adminApi.get<Blob>('/v1/transactions/export', {
+        params,
+        responseType: 'blob',
+      })
+      downloadFileFromResponse(response, 'transactions_report.xlsx')
+    } catch (err) {
+      // Blob responses hide the validation message the API sends as JSON.
+      if (isAxiosError(err) && err.response?.data instanceof Blob) {
+        try {
+          err.response.data = JSON.parse(await err.response.data.text())
+        } catch {
+          // Not JSON; keep the original error.
+        }
+      }
+      throw err
+    }
+  },
+
   async list(
     page = 1,
     perPage = 15,

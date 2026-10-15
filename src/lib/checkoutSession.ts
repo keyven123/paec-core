@@ -20,7 +20,13 @@ export type CheckoutSession = {
   subtotal: number
   promoDiscount: number
   total: number
-  appliedPromoCode?: { uuid: string; code: string } | null
+  appliedPromoCode?: {
+    uuid: string
+    code: string
+    /** Kept so the cart can re-price the discount when quantities change. */
+    discountType?: string
+    discountValue?: string
+  } | null
 }
 
 export type GuestCheckoutDetails = {

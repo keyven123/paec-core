@@ -1,14 +1,14 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, LogOut, Ticket, User } from 'lucide-react'
+import { ChevronDown, LogOut, ShoppingCart, Ticket, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { User as AccountUser } from '@/data/mockUser'
 import { signOut } from '@/lib/auth'
 import { cn } from '@/lib/utils'
+import { cartService } from '@/services/cartService'
 
 type AccountDropdownProps = {
   user: AccountUser
-  onSignedOut: () => void
 }
 
 const menuItems = [
@@ -16,9 +16,24 @@ const menuItems = [
   { label: 'Profile', section: 'profile' as const, icon: User },
 ]
 
-export function AccountDropdown({ user, onSignedOut }: AccountDropdownProps) {
+export function AccountDropdown({ user }: AccountDropdownProps) {
   const [open, setOpen] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    let active = true
+    cartService
+      .get()
+      .then(({ items }) => {
+        if (active) setCartCount(items.length)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -48,7 +63,6 @@ export function AccountDropdown({ user, onSignedOut }: AccountDropdownProps) {
   const handleSignOut = async () => {
     setOpen(false)
     await signOut()
-    onSignedOut()
   }
 
   return (
@@ -60,7 +74,8 @@ export function AccountDropdown({ user, onSignedOut }: AccountDropdownProps) {
         aria-haspopup="menu"
         className={cn(
           'flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50/50 py-1.5 pr-2 pl-1.5 transition-colors hover:bg-violet-50',
-          open && 'border-paec-violet/30 bg-violet-50 ring-2 ring-paec-violet/20',
+          open &&
+            'border-paec-violet/30 bg-violet-50 ring-2 ring-paec-violet/20',
         )}
       >
         <span className="flex size-8 items-center justify-center rounded-full bg-paec-orange text-xs font-bold text-white">
@@ -86,7 +101,9 @@ export function AccountDropdown({ user, onSignedOut }: AccountDropdownProps) {
             <p className="truncate text-sm font-semibold text-foreground">
               {user.name}
             </p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
           </div>
 
           {menuItems.map((item) => {
@@ -105,6 +122,24 @@ export function AccountDropdown({ user, onSignedOut }: AccountDropdownProps) {
               </Link>
             )
           })}
+
+          <Link
+            to="/checkout"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-violet-50"
+          >
+            <ShoppingCart className="size-4 text-paec-violet" />
+            Checkout
+            {cartCount > 0 && (
+              <span
+                className="ml-auto rounded-full bg-paec-orange px-2 py-0.5 text-[11px] font-semibold text-white"
+                aria-label={`${cartCount} activit${cartCount === 1 ? 'y' : 'ies'} in your cart`}
+              >
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
           <div className="mt-1 border-t border-violet-50 pt-1">
             <button

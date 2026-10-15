@@ -8,6 +8,8 @@ export type PendingPayment = {
   transactionUuid: string
   provider: PaymentGatewayProvider
   order: CheckoutSession
+  /** Cart checkouts: every activity's order paid by this one payment. */
+  orders?: Array<{ transactionUuid: string; order: CheckoutSession }>
   customer: { name: string; email: string; isGuest: boolean }
 }
 
@@ -33,4 +35,18 @@ export function loadPendingPayment(
 
 export function clearPendingPayment(): void {
   localStorage.removeItem(PENDING_PAYMENT_KEY)
+}
+
+export function pendingPaymentSummary(payment: PendingPayment): {
+  label: string
+  total: number
+} {
+  const orders = payment.orders?.map((entry) => entry.order) ?? [payment.order]
+  return {
+    label:
+      orders.length > 1
+        ? `${orders.length} activities`
+        : (orders[0]?.attractionName ?? payment.order.attractionName),
+    total: orders.reduce((sum, order) => sum + order.total, 0),
+  }
 }

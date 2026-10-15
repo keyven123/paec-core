@@ -1,5 +1,8 @@
 import type { CheckoutSession } from '@/lib/checkoutSession'
-import type { CheckoutResponse } from '@/services/transactionService'
+import type {
+  CheckoutResponse,
+  GroupOrder,
+} from '@/services/transactionService'
 
 const ORDER_CONFIRMATION_KEY = 'paec_order_confirmation'
 
@@ -55,16 +58,49 @@ export function buildOrderConfirmation(
   }
 }
 
-export function saveOrderConfirmation(confirmation: OrderConfirmation): void {
+/**
+ * Confirmations for every order paid together (one per activity in a cart checkout).
+ */
+export function buildGroupOrderConfirmations(
+  orders: Array<{ transactionUuid: string; order: CheckoutSession }>,
+  placed: Array<GroupOrder>,
+  customer: { name: string; email: string; isGuest: boolean },
+): Array<OrderConfirmation> {
+  return orders.flatMap(({ transactionUuid, order }) => {
+    const match = placed.find(
+      (item) => item.transaction.uuid === transactionUuid,
+    )
+    return match
+      ? [
+          buildOrderConfirmation(
+            order,
+            {
+              success: true,
+              transaction: match.transaction,
+              tickets: match.tickets,
+            },
+            customer,
+          ),
+        ]
+      : []
+  })
+}
+
+export function saveOrderConfirmation(
+  confirmation: OrderConfirmation | Array<OrderConfirmation>,
+): void {
   sessionStorage.setItem(ORDER_CONFIRMATION_KEY, JSON.stringify(confirmation))
 }
 
-export function loadOrderConfirmation(): OrderConfirmation | null {
+export function loadOrderConfirmations(): Array<OrderConfirmation> {
   try {
     const raw = sessionStorage.getItem(ORDER_CONFIRMATION_KEY)
-    if (!raw) return null
-    return JSON.parse(raw) as OrderConfirmation
+    if (!raw) return []
+    const stored = JSON.parse(raw) as
+      | OrderConfirmation
+      | Array<OrderConfirmation>
+    return Array.isArray(stored) ? stored : [stored]
   } catch {
-    return null
+    return []
   }
 }

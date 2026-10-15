@@ -1,21 +1,22 @@
-import { useNavigate } from '@tanstack/react-router'
-import { CheckCircle2, Ticket } from 'lucide-react'
+import { CheckCircle2, Loader2, Ticket } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import type { Attraction, AttractionLocation } from '@/data/mockAttractions'
+import type { CheckoutTicketLine } from '@/lib/checkoutSession'
+import type { PublicPromoCode } from '@/services/promoCodeService'
 import { PromoCodeBlock } from '@/components/attraction/PromoCodeBlock'
 import { TicketTypeCard } from '@/components/attraction/TicketTypeCard'
 import { Button } from '@/components/ui/button'
 import { ThemedSelect } from '@/components/ui/themed-select'
 import { VisitDatePicker } from '@/components/ui/visit-date-picker'
-import type { Attraction, AttractionLocation } from '@/data/mockAttractions'
-import { getTicketCount, saveCheckoutSession } from '@/lib/checkoutSession'
-import type { CheckoutTicketLine } from '@/lib/checkoutSession'
+import { getTicketCount } from '@/lib/checkoutSession'
+import { useStartBooking } from '@/lib/useStartBooking'
+import { useStoredUser } from '@/lib/useStoredUser'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
 import { isVisitDateBookable } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import { blockedDateService } from '@/services/blockedDateService'
-import type { PublicPromoCode } from '@/services/promoCodeService'
 
 type BookingSidebarProps = {
   attraction: Attraction
@@ -34,13 +35,14 @@ export function BookingSidebar({
   attraction,
   onLocationChange,
 }: BookingSidebarProps) {
-  const navigate = useNavigate()
+  const { startBooking, adding } = useStartBooking()
+  const signedIn = Boolean(useStoredUser())
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [locationUuid, setLocationUuid] = useState(
     attraction.locations[0]?.uuid ?? '',
   )
   const [visitDate, setVisitDate] = useState('')
-  const [blockedDates, setBlockedDates] = useState<string[]>([])
+  const [blockedDates, setBlockedDates] = useState<Array<string>>([])
   const [appliedPromoCode, setAppliedPromoCode] =
     useState<PublicPromoCode | null>(null)
 
@@ -142,7 +144,7 @@ export function BookingSidebar({
       return
     }
 
-    saveCheckoutSession({
+    void startBooking({
       attractionId: attraction.id,
       eventUuid: attraction.eventUuid,
       eventLocationUuid: locationUuid,
@@ -155,11 +157,14 @@ export function BookingSidebar({
       promoDiscount,
       total,
       appliedPromoCode: appliedPromoCode
-        ? { uuid: appliedPromoCode.uuid, code: appliedPromoCode.code }
+        ? {
+            uuid: appliedPromoCode.uuid,
+            code: appliedPromoCode.code,
+            discountType: appliedPromoCode.discount_type,
+            discountValue: appliedPromoCode.discount_value,
+          }
         : null,
     })
-
-    void navigate({ to: '/checkout' })
   }
 
   return (
@@ -275,12 +280,17 @@ export function BookingSidebar({
         <Button
           type="button"
           onClick={handleGetTickets}
+          disabled={adding}
           className={cn(
             'h-12 w-full rounded-xl bg-paec-orange text-base font-semibold hover:bg-paec-orange-light',
           )}
         >
-          <Ticket className="size-4" />
-          Get Tickets
+          {adding ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Ticket className="size-4" />
+          )}
+          {signedIn ? 'Add to Cart & Checkout' : 'Get Tickets'}
         </Button>
 
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-emerald-600">

@@ -1,8 +1,14 @@
-import { mockUser, type User } from '@/data/mockUser'
+import type { User } from '@/data/mockUser'
+import { mockUser } from '@/data/mockUser'
 import { CUSTOMER_TOKEN_KEY, getApiErrorMessage } from '@/lib/api'
 import { authService } from '@/services/authService'
 
 const STORAGE_KEY = 'paec_user'
+export const AUTH_CHANGE_EVENT = 'paec:auth-change'
+
+function notifyAuthChange() {
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT))
+}
 
 export function getStoredUser(): User | null {
   try {
@@ -16,11 +22,13 @@ export function getStoredUser(): User | null {
 
 export function setStoredUser(user: User) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+  notifyAuthChange()
 }
 
 export function clearStoredUser() {
   localStorage.removeItem(STORAGE_KEY)
   localStorage.removeItem(CUSTOMER_TOKEN_KEY)
+  notifyAuthChange()
 }
 
 export function getCustomerToken(): string | null {

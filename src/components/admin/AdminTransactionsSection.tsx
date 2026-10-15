@@ -1,7 +1,21 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Search, Ticket } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  Search,
+  Ticket,
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import type {ExportTransactionsDefaults} from '@/components/admin/ExportTransactionsModal';
+import type {DateRange} from '@/components/ui/date-range-picker';
+import type {AdminTransaction} from '@/services/adminTransactionService';
 import { AdminTransactionDetailModal } from '@/components/admin/AdminTransactionDetailModal'
+import {
+  
+  ExportTransactionsModal
+} from '@/components/admin/ExportTransactionsModal'
 import {
   formatCurrency,
   formatDateTime,
@@ -10,19 +24,19 @@ import {
   statusBadgeClass,
 } from '@/components/admin/transactionFormat'
 import {
-  DateRangePicker,
-  type DateRange,
+  
+  DateRangePicker
 } from '@/components/ui/date-range-picker'
 import { getApiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
-  adminTransactionService,
-  type AdminTransaction,
+  
+  adminTransactionService
 } from '@/services/adminTransactionService'
 
 type TransactionStatus = 'all' | 'confirmed' | 'pending' | 'cancelled'
 
-const statusOptions: { value: TransactionStatus; label: string }[] = [
+const statusOptions: Array<{ value: TransactionStatus; label: string }> = [
   { value: 'all', label: 'All Status' },
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'pending', label: 'Pending' },
@@ -38,12 +52,23 @@ export function AdminTransactionsSection() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [status, setStatus] = useState<TransactionStatus>('all')
   const [visitDateRange, setVisitDateRange] = useState<DateRange | null>(null)
-  const [transactions, setTransactions] = useState<AdminTransaction[]>([])
+  const [transactions, setTransactions] = useState<Array<AdminTransaction>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [confirmedCount, setConfirmedCount] = useState(0)
+  const [exportOpen, setExportOpen] = useState(false)
+  const closeExport = useCallback(() => setExportOpen(false), [])
+  const exportDefaults = useMemo<ExportTransactionsDefaults>(
+    () => ({
+      orderStatus: status === 'all' ? '' : status,
+      dateType: visitDateRange ? 'visit' : 'purchase',
+      startDate: visitDateRange?.start ?? '',
+      endDate: visitDateRange?.end ?? '',
+    }),
+    [status, visitDateRange],
+  )
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 400)
@@ -92,13 +117,23 @@ export function AdminTransactionsSection() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
-          Transactions
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Track all ticket purchases and bookings
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
+            Transactions
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Track all ticket purchases and bookings
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExportOpen(true)}
+          className="inline-flex h-10 items-center justify-center gap-2 self-start rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 sm:self-auto"
+        >
+          <FileSpreadsheet className="size-4" />
+          Export Report
+        </button>
       </div>
 
       {error ? (
@@ -152,7 +187,9 @@ export function AdminTransactionsSection() {
         <div className="md:hidden">
           <div className="flex items-center justify-between border-b border-violet-100 bg-violet-50/50 px-4 py-2.5 text-xs font-medium text-muted-foreground">
             <span>Transactions</span>
-            <span>{loading ? 'Confirmed: —' : `Confirmed: ${confirmedCount}`}</span>
+            <span>
+              {loading ? 'Confirmed: —' : `Confirmed: ${confirmedCount}`}
+            </span>
           </div>
           {loading ? (
             <p className="px-4 py-14 text-center text-sm text-muted-foreground">
@@ -212,7 +249,9 @@ export function AdminTransactionsSection() {
                       {tx.order_status}
                     </span>
                     <span>Visit {formatVisitDate(getVisitDate(tx))}</span>
-                    <span>Paid {formatDateTime(tx.paid_at ?? tx.created_at)}</span>
+                    <span>
+                      Paid {formatDateTime(tx.paid_at ?? tx.created_at)}
+                    </span>
                   </div>
                 </li>
               ))}
@@ -240,7 +279,10 @@ export function AdminTransactionsSection() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center text-muted-foreground">
+                  <td
+                    colSpan={9}
+                    className="px-4 py-16 text-center text-muted-foreground"
+                  >
                     Loading transactions...
                   </td>
                 </tr>
@@ -344,6 +386,12 @@ export function AdminTransactionsSection() {
       <AdminTransactionDetailModal
         transactionUuid={selectedUuid}
         onClose={closeDetail}
+      />
+
+      <ExportTransactionsModal
+        open={exportOpen}
+        defaults={exportDefaults}
+        onClose={closeExport}
       />
     </div>
   )

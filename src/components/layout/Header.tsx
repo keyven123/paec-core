@@ -2,19 +2,18 @@ import { Link } from '@tanstack/react-router'
 import { Info } from 'lucide-react'
 import { useRef, useState } from 'react'
 
-import type { User } from '@/data/mockUser'
 import { SignInModal } from '@/components/auth/SignInModal'
 import { AccountDropdown } from '@/components/layout/AccountDropdown'
 import { HeaderSearch } from '@/components/layout/HeaderSearch'
 import { MobileHeaderSearch } from '@/components/layout/MobileHeaderSearch'
 import { useHideOnScroll } from '@/components/layout/useHideOnScroll'
 import { Button } from '@/components/ui/button'
-import { getStoredUser } from '@/lib/auth'
+import { useStoredUser } from '@/lib/useStoredUser'
 import { cn } from '@/lib/utils'
 
 export function Header() {
   const [signInOpen, setSignInOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(() => getStoredUser())
+  const user = useStoredUser()
   const headerRef = useRef<HTMLElement>(null)
   const hidden = useHideOnScroll(headerRef)
 
@@ -55,10 +54,7 @@ export function Header() {
               </Link>
 
               {user ? (
-                <AccountDropdown
-                  user={user}
-                  onSignedOut={() => setUser(null)}
-                />
+                <AccountDropdown user={user} />
               ) : (
                 <Button
                   onClick={() => setSignInOpen(true)}
@@ -79,7 +75,7 @@ export function Header() {
       <SignInModal
         open={signInOpen}
         onClose={() => setSignInOpen(false)}
-        onSuccess={() => setUser(getStoredUser())}
+        onSuccess={() => setSignInOpen(false)}
       />
     </>
   )

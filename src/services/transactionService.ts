@@ -56,6 +56,15 @@ export type CheckoutResponse = {
   tickets?: Array<PlacedTicket>
 }
 
+/** One activity's order within a cart checkout that shared a single payment. */
+export type GroupOrder = {
+  cart_item_uuid: string | null
+  transaction: NonNullable<CheckoutResponse['transaction']> & {
+    event_uuid?: string
+  }
+  tickets: Array<PlacedTicket>
+}
+
 export type GatewayCheckoutPayload = {
   temp_transaction_uuid: string
   payment_gateway_uuid: string
@@ -64,6 +73,7 @@ export type GatewayCheckoutPayload = {
 }
 
 export type GatewayCheckoutResponse = CheckoutResponse & {
+  orders?: Array<GroupOrder>
   redirect_url?: string
   payment?: {
     provider: string
@@ -81,6 +91,7 @@ export type PaymentVerificationResponse = {
     payment_status?: string
   }
   tickets?: Array<PlacedTicket>
+  orders?: Array<GroupOrder>
 }
 
 export type GuestCustomerDetails = {

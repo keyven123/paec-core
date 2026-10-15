@@ -23,10 +23,15 @@ import {
   loadCheckoutSession,
 } from '@/lib/checkoutSession'
 import {
+  buildGroupOrderConfirmations,
   buildOrderConfirmation,
   saveOrderConfirmation,
 } from '@/lib/orderConfirmation'
-import { clearPendingPayment, loadPendingPayment } from '@/lib/pendingPayment'
+import {
+  clearPendingPayment,
+  loadPendingPayment,
+  pendingPaymentSummary,
+} from '@/lib/pendingPayment'
 import { cn } from '@/lib/utils'
 import { getProviderMeta } from '@/services/paymentGatewayService'
 import { transactionService } from '@/services/transactionService'
@@ -76,7 +81,13 @@ export function PaymentSuccessReturnPage() {
             return
           }
           saveOrderConfirmation(
-            buildOrderConfirmation(pending.order, result, pending.customer),
+            pending.orders && result.orders
+              ? buildGroupOrderConfirmations(
+                  pending.orders,
+                  result.orders,
+                  pending.customer,
+                )
+              : buildOrderConfirmation(pending.order, result, pending.customer),
           )
           clearCheckoutSession()
           clearPendingPayment()
@@ -329,14 +340,14 @@ function ReturnShell({
             <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3 text-left">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {pending.order.attractionName}
+                  {pendingPaymentSummary(pending).label}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Paying with {getProviderMeta(pending.provider).label}
                 </p>
               </div>
               <p className="shrink-0 text-base font-bold text-paec-violet">
-                ₱{pending.order.total.toLocaleString()}
+                ₱{pendingPaymentSummary(pending).total.toLocaleString()}
               </p>
             </div>
           ) : null}
@@ -350,7 +361,9 @@ function ReturnShell({
 }
 
 function BackToCheckoutButton() {
-  const hasCheckout = Boolean(loadCheckoutSession())
+  // Signed-in customers keep their cart, so checkout always has something to show.
+  const hasCheckout =
+    isCustomerAuthenticated() || Boolean(loadCheckoutSession())
 
   return (
     <Button

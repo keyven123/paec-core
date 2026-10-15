@@ -1,6 +1,9 @@
 import type { PublicPromoCode } from '@/services/promoCodeService'
 
-function calcDiscount(subtotal: number, promo: PublicPromoCode): number {
+function calcDiscount(
+  subtotal: number,
+  promo: Pick<PublicPromoCode, 'discount_type' | 'discount_value'>,
+): number {
   const value = Number.parseFloat(promo.discount_value)
   if (Number.isNaN(value) || subtotal <= 0) return 0
 
@@ -17,7 +20,7 @@ function calcDiscount(subtotal: number, promo: PublicPromoCode): number {
 
 export function getPromoDiscountAmount(
   subtotal: number,
-  promo: PublicPromoCode | null,
+  promo: Pick<PublicPromoCode, 'discount_type' | 'discount_value'> | null,
 ): number {
   if (!promo || subtotal <= 0) return 0
   return calcDiscount(subtotal, promo)

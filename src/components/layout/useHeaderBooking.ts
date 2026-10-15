@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { Attraction } from '@/data/mockAttractions'
-import { saveCheckoutSession } from '@/lib/checkoutSession'
+import { useStartBooking } from '@/lib/useStartBooking'
 import { isVisitDateBookable } from '@/lib/visitDate'
 import { blockedDateService } from '@/services/blockedDateService'
 import { marketplaceService } from '@/services/marketplaceService'
@@ -24,7 +23,7 @@ export function notifyRejectedVisitDate(reason: 'blocked' | 'past' | 'cutoff') {
 }
 
 export function useHeaderBooking() {
-  const navigate = useNavigate()
+  const { startBooking } = useStartBooking()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Attraction | null>(null)
   const [ticketTypeId, setTicketTypeId] = useState('')
@@ -133,7 +132,7 @@ export function useHeaderBooking() {
 
     const subtotal = selectedTicket.price * pax
 
-    saveCheckoutSession({
+    void startBooking({
       attractionId: activity.id,
       eventUuid: activity.eventUuid,
       eventLocationUuid: selectedLocation?.uuid ?? '',
@@ -156,7 +155,6 @@ export function useHeaderBooking() {
       appliedPromoCode: null,
     })
 
-    void navigate({ to: '/checkout' })
     return true
   }
 

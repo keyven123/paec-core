@@ -14,7 +14,6 @@ import {
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import type { User } from '@/data/mockUser'
 import type { ConfirmedTicket } from '@/lib/orderConfirmation'
 import type { GroupPassSource, TicketImageSource } from '@/lib/ticketDownload'
 import { SignInModal } from '@/components/auth/SignInModal'
@@ -24,8 +23,8 @@ import { OrderGroupQrCard } from '@/components/checkout/OrderGroupQrCard'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
-import { getStoredUser } from '@/lib/auth'
-import { loadOrderConfirmation } from '@/lib/orderConfirmation'
+import { useStoredUser } from '@/lib/useStoredUser'
+import { loadOrderConfirmations } from '@/lib/orderConfirmation'
 import { downloadGroupPassPdf, downloadTicketsPdf } from '@/lib/ticketDownload'
 import { cn } from '@/lib/utils'
 
@@ -40,8 +39,10 @@ function formatVisitDate(value: string) {
 }
 
 export function OrderSuccessPage() {
-  const [confirmation] = useState(() => loadOrderConfirmation())
-  const [user, setUser] = useState<User | null>(() => getStoredUser())
+  const [confirmations] = useState(() => loadOrderConfirmations())
+  const [activeIndex, setActiveIndex] = useState(0)
+  const confirmation = confirmations.at(activeIndex) ?? null
+  const user = useStoredUser()
   const [signUpOpen, setSignUpOpen] = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
   const qrRefs = useRef(new Map<string, HTMLDivElement>())
@@ -149,6 +150,46 @@ export function OrderSuccessPage() {
       <Header />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+        {confirmations.length > 1 && (
+          <div className="mb-4 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-semibold text-foreground">
+              {confirmations.length} bookings confirmed in one payment
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Each activity has its own order, tickets and confirmation email.
+              Choose an activity to see its tickets.
+            </p>
+            <div
+              className="mt-3 flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Confirmed bookings"
+            >
+              {confirmations.map((item, index) => (
+                <button
+                  key={item.orderNumber || index}
+                  type="button"
+                  role="tab"
+                  aria-selected={index === activeIndex}
+                  onClick={() => setActiveIndex(index)}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    index === activeIndex
+                      ? 'border-paec-violet bg-paec-violet text-white'
+                      : 'border-violet-200 bg-white text-paec-violet hover:bg-violet-50',
+                  )}
+                >
+                  {item.order.attractionName}
+                  {item.orderNumber && (
+                    <span className="ml-1.5 font-normal opacity-80">
+                      {item.orderNumber}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-paec-violet to-paec-violet-dark px-6 py-8 text-white shadow-xl shadow-paec-violet/20 sm:px-10 sm:py-10">
           <div className="pointer-events-none absolute -top-16 -right-16 size-64 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-24 right-24 size-48 rounded-full bg-paec-orange/20" />
@@ -392,10 +433,7 @@ export function OrderSuccessPage() {
         open={signUpOpen}
         initialMode="signup"
         onClose={() => setSignUpOpen(false)}
-        onSuccess={() => {
-          setUser(getStoredUser())
-          setSignUpOpen(false)
-        }}
+        onSuccess={() => setSignUpOpen(false)}
       />
     </div>
   )
