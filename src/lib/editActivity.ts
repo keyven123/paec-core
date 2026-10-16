@@ -17,9 +17,7 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
         const required =
           typeof value === 'string'
             ? value === 'required'
-            : typeof value === 'object' &&
-                value !== null &&
-                'required' in value
+            : typeof value === 'object' && value !== null && 'required' in value
               ? (value as { required?: string }).required === 'required'
               : false
         return {
@@ -77,8 +75,9 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
   formData.append('slug', form.slug || slugify(form.name))
   formData.append('city', form.city.trim())
   if (form.address.trim()) formData.append('address', form.address.trim())
-  if (form.organizationUuid) {
-    formData.append('organization_uuid', form.organizationUuid)
+  // Super-admin update requires this; omit only when truly unset so the API can fill a default.
+  if (form.organizationUuid.trim()) {
+    formData.append('organization_uuid', form.organizationUuid.trim())
   }
   if (form.eventSectionUuid) {
     formData.append('event_section_uuid', form.eventSectionUuid)
@@ -96,33 +95,32 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
 
   appendPaymentGatewayUuids(formData, form)
 
-  formData.append(
-    'enable_meta_pixel',
-    form.enableMetaPixel ? 'true' : 'false',
-  )
+  formData.append('enable_meta_pixel', form.enableMetaPixel ? 'true' : 'false')
   if (form.enableMetaPixel) {
     if (form.metaPixelId.trim()) {
       formData.append('meta_pixel_id', form.metaPixelId.trim())
     }
     if (form.metaPixelAccessToken.trim()) {
-      formData.append('meta_pixel_access_token', form.metaPixelAccessToken.trim())
+      formData.append(
+        'meta_pixel_access_token',
+        form.metaPixelAccessToken.trim(),
+      )
     }
   }
 
   if (form.attendeeFields.length > 0) {
     const otherInfo = form.attendeeFields
       .filter((field) => field.label.trim())
-      .reduce<Record<string, { required: string; type: string; placeholder: string }>>(
-        (acc, field) => {
-          acc[field.label.trim()] = {
-            required: field.required ? 'required' : 'optional',
-            type: 'text',
-            placeholder: '',
-          }
-          return acc
-        },
-        {},
-      )
+      .reduce<
+        Record<string, { required: string; type: string; placeholder: string }>
+      >((acc, field) => {
+        acc[field.label.trim()] = {
+          required: field.required ? 'required' : 'optional',
+          type: 'text',
+          placeholder: '',
+        }
+        return acc
+      }, {})
     if (Object.keys(otherInfo).length > 0) {
       formData.append('other_info', JSON.stringify(otherInfo))
     }
