@@ -130,6 +130,17 @@ export const promoCodeService = {
     return data.data
   },
 
+  async updatePromoCodeStatus(
+    uuid: string,
+    status: 'active' | 'inactive',
+  ): Promise<PromoCode> {
+    const { data } = await adminApi.put<{ data: PromoCode }>(
+      `/v1/promo-codes/${uuid}`,
+      { status },
+    )
+    return data.data
+  },
+
   async deletePromoCode(uuid: string): Promise<void> {
     await adminApi.delete(`/v1/promo-codes/${uuid}`)
   },
