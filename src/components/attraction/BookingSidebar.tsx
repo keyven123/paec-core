@@ -14,7 +14,10 @@ import { getTicketCount } from '@/lib/checkoutSession'
 import { useStartBooking } from '@/lib/useStartBooking'
 import { useStoredUser } from '@/lib/useStoredUser'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
-import { isVisitDateBookable } from '@/lib/visitDate'
+import {
+  isTicketAvailableForVisitDate,
+  isVisitDateBookable,
+} from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import { blockedDateService } from '@/services/blockedDateService'
 
@@ -91,8 +94,31 @@ export function BookingSidebar({
     }
   }, [attraction.eventUuid])
 
+  useEffect(() => {
+    if (!visitDate) return
+
+    setQuantities((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const ticket of attraction.ticketTypes) {
+        if (
+          (next[ticket.id] ?? 0) > 0 &&
+          !isTicketAvailableForVisitDate(ticket, visitDate)
+        ) {
+          next[ticket.id] = 0
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [visitDate, attraction.ticketTypes])
+
   const ticketLines: Array<CheckoutTicketLine> = attraction.ticketTypes
-    .filter((ticket) => (quantities[ticket.id] ?? 0) > 0)
+    .filter(
+      (ticket) =>
+        (quantities[ticket.id] ?? 0) > 0 &&
+        isTicketAvailableForVisitDate(ticket, visitDate),
+    )
     .map((ticket) => ({
       ticketTypeId: ticket.id,
       name: ticket.name,
@@ -224,15 +250,34 @@ export function BookingSidebar({
             </p>
           ) : (
             <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-0.5">
-              {attraction.ticketTypes.map((ticket) => (
-                <TicketTypeCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  quantity={quantities[ticket.id] ?? 0}
-                  onDecrease={() => changeQuantity(ticket.id, -1)}
-                  onIncrease={() => changeQuantity(ticket.id, 1)}
-                />
-              ))}
+              {attraction.ticketTypes.map((ticket) => {
+                const unavailable =
+                  Boolean(visitDate) &&
+                  !isTicketAvailableForVisitDate(ticket, visitDate)
+
+                return (
+                  <TicketTypeCard
+                    key={ticket.id}
+                    ticket={ticket}
+                    quantity={quantities[ticket.id] ?? 0}
+                    unavailable={unavailable}
+                    onDecrease={() => changeQuantity(ticket.id, -1)}
+                    onIncrease={() => {
+                      if (!visitDate) {
+                        toast.error('Please select a date of visit first')
+                        return
+                      }
+                      if (unavailable) {
+                        toast.error(
+                          'This ticket is unavailable for the selected date.',
+                        )
+                        return
+                      }
+                      changeQuantity(ticket.id, 1)
+                    }}
+                  />
+                )
+              })}
             </div>
           )}
         </div>

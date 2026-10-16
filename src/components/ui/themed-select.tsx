@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 export type SelectOption = {
   value: string
   label: string
+  disabled?: boolean
 }
 
 type ThemedSelectProps = {
@@ -77,24 +78,31 @@ export function ThemedSelect({
         <div className="absolute top-full z-50 mt-2 w-full overflow-hidden rounded-xl border border-violet-100 bg-white py-1 shadow-lg">
           {options.map((option) => {
             const isSelected = option.value === value
+            const optionDisabled = Boolean(option.disabled)
 
             return (
               <button
                 key={option.value}
                 type="button"
+                disabled={optionDisabled}
                 onClick={() => {
+                  if (optionDisabled) return
                   onChange(option.value)
                   setOpen(false)
                 }}
                 className={cn(
                   'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors',
-                  isSelected
-                    ? 'bg-paec-violet font-medium text-white'
-                    : 'text-foreground hover:bg-violet-50',
+                  optionDisabled
+                    ? 'cursor-not-allowed text-muted-foreground opacity-60'
+                    : isSelected
+                      ? 'bg-paec-violet font-medium text-white'
+                      : 'text-foreground hover:bg-violet-50',
                 )}
               >
                 <span className="truncate">{option.label}</span>
-                {isSelected && <Check className="size-4 shrink-0" />}
+                {isSelected && !optionDisabled ? (
+                  <Check className="size-4 shrink-0" />
+                ) : null}
               </button>
             )
           })}

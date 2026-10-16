@@ -48,6 +48,16 @@ export function StepImages({ form, onChange }: StepImagesProps) {
           files={form.showcaseImages}
           existingImages={editForm.existingShowcaseImages}
           onChange={(files) => onChange({ showcaseImages: files })}
+          onRemoveExisting={
+            Array.isArray(editForm.existingShowcaseImages)
+              ? (uuid) =>
+                  onChange({
+                    existingShowcaseImages: editForm.existingShowcaseImages.filter(
+                      (image) => image.uuid !== uuid,
+                    ),
+                  })
+              : undefined
+          }
         />
       </div>
     </section>

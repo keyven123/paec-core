@@ -4,7 +4,10 @@ import { toast } from 'sonner'
 
 import type { Attraction } from '@/data/mockAttractions'
 import { useStartBooking } from '@/lib/useStartBooking'
-import { isVisitDateBookable } from '@/lib/visitDate'
+import {
+  isTicketAvailableForVisitDate,
+  isVisitDateBookable,
+} from '@/lib/visitDate'
 import { blockedDateService } from '@/services/blockedDateService'
 import { marketplaceService } from '@/services/marketplaceService'
 
@@ -69,6 +72,14 @@ export function useHeaderBooking() {
     setLocationUuid(activity?.locations[0]?.uuid ?? '')
   }, [activity])
 
+  useEffect(() => {
+    if (!visitDate || !ticketTypeId) return
+    const ticket = ticketTypes.find((item) => item.id === ticketTypeId)
+    if (ticket && !isTicketAvailableForVisitDate(ticket, visitDate)) {
+      setTicketTypeId('')
+    }
+  }, [visitDate, ticketTypeId, ticketTypes])
+
   const matches = useMemo(() => {
     const term = query.trim().toLowerCase()
     if (!term || selected?.name === query) return activities
@@ -105,16 +116,20 @@ export function useHeaderBooking() {
       toast.error('Ticket types are still loading. Please try again.')
       return false
     }
+    if (!visitDate) {
+      toast.error('Please select a date of visit')
+      return false
+    }
     if (!selectedTicket) {
       toast.error('Please select a ticket type')
       return false
     }
-    if (locations.length > 0 && !selectedLocation) {
-      toast.error('Please select a location')
+    if (!isTicketAvailableForVisitDate(selectedTicket, visitDate)) {
+      toast.error('This ticket is unavailable for the selected date.')
       return false
     }
-    if (!visitDate) {
-      toast.error('Please select a date of visit')
+    if (locations.length > 0 && !selectedLocation) {
+      toast.error('Please select a location')
       return false
     }
     if (blockedDates.includes(visitDate)) {

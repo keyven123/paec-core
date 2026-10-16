@@ -18,6 +18,7 @@ import {
 } from '@/components/layout/useHeaderBooking'
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import { VisitDatePicker } from '@/components/ui/visit-date-picker'
+import { isTicketAvailableForVisitDate } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 
 function useClickOutside(onOutside: () => void) {
@@ -41,7 +42,12 @@ type CompactSelectProps = {
   icon: ReactNode
   value: string
   onChange: (value: string) => void
-  options: Array<{ value: string; label: string; hint?: string }>
+  options: Array<{
+    value: string
+    label: string
+    hint?: string
+    disabled?: boolean
+  }>
   placeholder: string
   disabled?: boolean
   className?: string
@@ -91,20 +97,25 @@ function CompactSelect({
         <div className="absolute top-full left-0 z-50 mt-3 w-64 overflow-hidden rounded-xl border border-violet-100 bg-white py-1 shadow-lg">
           {options.map((option) => {
             const isSelected = option.value === value
+            const optionDisabled = Boolean(option.disabled)
 
             return (
               <button
                 key={option.value}
                 type="button"
+                disabled={optionDisabled}
                 onClick={() => {
+                  if (optionDisabled) return
                   onChange(option.value)
                   setOpen(false)
                 }}
                 className={cn(
                   'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors',
-                  isSelected
-                    ? 'bg-paec-violet font-medium text-white'
-                    : 'text-foreground hover:bg-violet-50',
+                  optionDisabled
+                    ? 'cursor-not-allowed text-muted-foreground opacity-60'
+                    : isSelected
+                      ? 'bg-paec-violet font-medium text-white'
+                      : 'text-foreground hover:bg-violet-50',
                 )}
               >
                 <span className="truncate">{option.label}</span>
@@ -313,11 +324,20 @@ export function HeaderSearch() {
               ? 'No tickets'
               : 'Ticket type'
         }
-        options={ticketTypes.map((ticket) => ({
-          value: ticket.id,
-          label: ticket.name,
-          hint: `₱${ticket.price.toLocaleString()}`,
-        }))}
+        options={ticketTypes.map((ticket) => {
+          const unavailable =
+            Boolean(visitDate) &&
+            !isTicketAvailableForVisitDate(ticket, visitDate)
+
+          return {
+            value: ticket.id,
+            label: ticket.name,
+            hint: unavailable
+              ? 'Unavailable'
+              : `₱${ticket.price.toLocaleString()}`,
+            disabled: unavailable,
+          }
+        })}
       />
 
       {divider}

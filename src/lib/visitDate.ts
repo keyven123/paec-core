@@ -47,6 +47,25 @@ export function isVisitDateBookable(
   return true
 }
 
+/** Calendar-day window from ticket available_from / available_to (inclusive). */
+export function isTicketAvailableForVisitDate(
+  ticket: {
+    availableFrom?: string | null
+    availableTo?: string | null
+  },
+  visitDate: string | null | undefined,
+): boolean {
+  if (!visitDate) return true
+
+  const from = ticket.availableFrom?.slice(0, 10)
+  if (from && visitDate < from) return false
+
+  const to = ticket.availableTo?.slice(0, 10)
+  if (to && visitDate > to) return false
+
+  return true
+}
+
 export function getEarliestBookableDate(
   cutoffTime: string | null | undefined,
   now = new Date(),
