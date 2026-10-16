@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import type {EditActivityForm} from '@/types/editActivity';
 import { CreateActivityStepper } from '@/components/admin/create-activity/CreateActivityStepper'
 import { StepAttendeeTracking } from '@/components/admin/create-activity/steps/StepAttendeeTracking'
 import { StepBasics } from '@/components/admin/create-activity/steps/StepBasics'
@@ -17,11 +18,9 @@ import {
 } from '@/lib/editActivity'
 import { adminEventService } from '@/services/adminEventService'
 import { categoryService } from '@/services/categoryService'
+import { organizationService } from '@/services/organizationService'
 import { PAYMENT_STEP, SUMMARY_STEP } from '@/types/createActivity'
-import {
-  editActivitySteps,
-  type EditActivityForm,
-} from '@/types/editActivity'
+import {  editActivitySteps } from '@/types/editActivity'
 
 type AdminEditActivitySectionProps = {
   activityId: string
@@ -33,9 +32,9 @@ export function AdminEditActivitySection({
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<EditActivityForm | null>(null)
-  const [categories, setCategories] = useState<{ uuid: string; name: string }[]>(
-    [],
-  )
+  const [categories, setCategories] = useState<
+    Array<{ uuid: string; name: string }>
+  >([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -46,7 +45,19 @@ export function AdminEditActivitySection({
         adminEventService.getEventDetails(activityId),
         categoryService.listCategories(),
       ])
-      setForm(mapEventToEditForm(eventResponse.data))
+      const mapped = mapEventToEditForm(eventResponse.data)
+      // Super-admin save requires organization_uuid; fill it when the activity has none.
+      if (!mapped.organizationUuid) {
+        const organizations = await organizationService.listOptions()
+        const preferred =
+          organizations.find((org) => /paec/i.test(org.name)) ??
+          organizations.at(0)
+        if (preferred) {
+          mapped.organizationUuid = preferred.uuid
+          mapped.organizationName = preferred.name
+        }
+      }
+      setForm(mapped)
       setCategories(categoryList)
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Failed to load activity.'))
@@ -105,9 +116,32 @@ export function AdminEditActivitySection({
 
     setSaving(true)
     try {
+      let organizationUuid = form.organizationUuid.trim()
+      if (!organizationUuid) {
+        const organizations = await organizationService.listOptions()
+        const preferred =
+          organizations.find((org) => /paec/i.test(org.name)) ??
+          organizations.at(0)
+        organizationUuid = preferred?.uuid ?? ''
+        if (preferred) {
+          setForm((current) =>
+            current
+              ? {
+                  ...current,
+                  organizationUuid: preferred.uuid,
+                  organizationName: preferred.name,
+                }
+              : current,
+          )
+        }
+      }
+
       await adminEventService.updateEvent(
         activityId,
-        buildEditActivityFormData(form),
+        buildEditActivityFormData({
+          ...form,
+          organizationUuid,
+        }),
       )
       toast.success('Activity saved successfully.')
       void navigate({
@@ -115,7 +149,10 @@ export function AdminEditActivitySection({
         params: { activityId },
       })
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to save activity.'))
+      const message = getApiErrorMessage(error, 'Failed to save activity.')
+      // Internal field — not something the activity editor should surface.
+      if (/organization[_\s-]?uuid/i.test(message)) return
+      toast.error(message)
     } finally {
       setSaving(false)
     }
@@ -191,7 +228,10 @@ export function AdminEditActivitySection({
           <StepPaymentGateway form={form} onChange={updateForm} />
         )}
         {step === SUMMARY_STEP && (
-          <StepSummary form={form} onEditStep={(nextStep) => setStep(nextStep)} />
+          <StepSummary
+            form={form}
+            onEditStep={(nextStep) => setStep(nextStep)}
+          />
         )}
         {step === lastStep && <StepPreview form={form} />}
       </div>
