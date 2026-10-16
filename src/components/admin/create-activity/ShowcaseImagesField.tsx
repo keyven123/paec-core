@@ -40,8 +40,7 @@ export function ShowcaseImagesField({
 
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList?.length) return
-    const next = [...files, ...Array.from(fileList)].slice(0, 10)
-    onChange(next)
+    onChange([...files, ...Array.from(fileList)])
     if (inputRef.current) {
       inputRef.current.value = ''
     }
