@@ -1,6 +1,9 @@
 import { ArrowRight } from 'lucide-react'
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo } from 'react'
 
+import { ImagePreviewFrame } from '../ImagePreviewFrame'
+import { sectionClassName } from '../formStyles'
+import type { ReactNode } from 'react'
 import type { CreateActivityForm } from '@/types/createActivity'
 import type { EditActivityForm } from '@/types/editActivity'
 import {
@@ -9,9 +12,6 @@ import {
 } from '@/components/admin/PaymentGatewayBadges'
 import { getProviderMeta } from '@/services/paymentGatewayService'
 import { PAYMENT_STEP } from '@/types/createActivity'
-
-import { ImagePreviewFrame } from '../ImagePreviewFrame'
-import { sectionClassName } from '../formStyles'
 
 type StepSummaryProps = {
   form: CreateActivityForm | EditActivityForm
@@ -110,8 +110,8 @@ function ReviewShowcaseImages({
   newFiles,
   existingUrls,
 }: {
-  newFiles: File[]
-  existingUrls: string[]
+  newFiles: Array<File>
+  existingUrls: Array<string>
 }) {
   const objectUrls = useMemo(
     () => newFiles.map((file) => URL.createObjectURL(file)),
@@ -191,6 +191,7 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Activity Name" value={form.name} />
             <Field label="Contact Email" value={form.contactEmail} />
+            <Field label="Contact Number" value={form.contactNumber || '—'} />
             <Field label="Category" value={form.category} />
             <Field label="City" value={form.city} />
             <Field label="Address" value={form.address} />

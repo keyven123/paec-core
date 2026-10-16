@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import type { Attraction, AttractionLocation } from '@/data/mockAttractions'
 import { BookingSidebar } from '@/components/attraction/BookingSidebar'
 import { ActivityShowcaseGallery } from '@/components/attraction/ActivityShowcaseGallery'
 import { RelatedAttractions } from '@/components/attraction/RelatedAttractions'
@@ -21,7 +22,6 @@ import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { useSiteContact } from '@/components/layout/useSiteContact'
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
-import type { Attraction, AttractionLocation } from '@/data/mockAttractions'
 import {
   getGoogleMapsHref,
   getMailtoHref,
@@ -34,10 +34,9 @@ import { marketplaceService } from '@/services/marketplaceService'
 export function AttractionDetailPage() {
   const { attractionId } = useParams({ from: '/attractions/$attractionId' })
   const [attraction, setAttraction] = useState<Attraction | null>(null)
-  const [selectedLocation, setSelectedLocation] = useState<AttractionLocation | null>(
-    null,
-  )
-  const [related, setRelated] = useState<Attraction[]>([])
+  const [selectedLocation, setSelectedLocation] =
+    useState<AttractionLocation | null>(null)
+  const [related, setRelated] = useState<Array<Attraction>>([])
   const [loading, setLoading] = useState(true)
   const [showFull, setShowFull] = useState(false)
   const contact = useSiteContact()
@@ -69,9 +68,7 @@ export function AttractionDetailPage() {
         if (cancelled) return
         setAttraction(detail)
         setRelated(
-          detail
-            ? all.filter((item) => item.id !== detail.id).slice(0, 4)
-            : [],
+          detail ? all.filter((item) => item.id !== detail.id).slice(0, 4) : [],
         )
       } finally {
         if (!cancelled) setLoading(false)
@@ -119,6 +116,9 @@ export function AttractionDetailPage() {
   const locationLabel = selectedLocation?.label ?? attraction.location
   const mapsQuery = selectedLocation?.address || locationLabel
   const contactEmail = attraction.contactEmail?.trim() || contact.contact_email
+  const contactPhone =
+    attraction.contactNumber?.trim() ||
+    (contact.contact_phone ? contact.contact_phone.trim() : '')
   const emailSubject = `Inquiry: ${attraction.name}`
 
   const ticketPrices = attraction.ticketTypes
@@ -142,7 +142,10 @@ export function AttractionDetailPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <nav className="mb-4 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground sm:mb-6">
-          <Link to="/" className="shrink-0 transition-colors hover:text-paec-violet">
+          <Link
+            to="/"
+            className="shrink-0 transition-colors hover:text-paec-violet"
+          >
             Home
           </Link>
           <ChevronRight className="size-3.5 shrink-0" />
@@ -177,14 +180,14 @@ export function AttractionDetailPage() {
                 <MapPin className="size-4 shrink-0 text-paec-violet" />
                 {locationLabel}
               </a>
-              {contact.contact_phone ? (
+              {contactPhone ? (
                 <a
-                  href={getPhoneHref(contact.contact_phone)}
+                  href={getPhoneHref(contactPhone)}
                   className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-paec-violet hover:underline"
                   title="Call us"
                 >
                   <Phone className="size-4 shrink-0 text-paec-violet" />
-                  {contact.contact_phone}
+                  {contactPhone}
                 </a>
               ) : null}
               {contactEmail ? (
@@ -322,7 +325,10 @@ export function AttractionDetailPage() {
         price={startingPrice}
         hidden={bookingVisible}
         onSelect={() =>
-          bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          bookingRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
         }
       />
     </div>

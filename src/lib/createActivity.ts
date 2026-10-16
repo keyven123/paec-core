@@ -20,6 +20,9 @@ export function buildCreateActivityFormData(
   formData.append('event_name', form.name.trim())
   formData.append('event_description', form.description.trim())
   formData.append('contact_email', form.contactEmail.trim())
+  if (form.contactNumber.trim()) {
+    formData.append('contact_number', form.contactNumber.trim())
+  }
   formData.append('category_uuid', form.categoryUuid)
   formData.append('event_type', 'daily')
   formData.append('event_config', 'open_ticket')

@@ -33,6 +33,7 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
     name: event.event_name,
     description: event.event_description,
     contactEmail: event.contact_email,
+    contactNumber: event.contact_number ?? '',
     category: event.category?.name ?? '',
     categoryUuid: event.category_uuid ?? '',
     address: event.address ?? '',
@@ -68,6 +69,8 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
   formData.append('event_name', form.name.trim())
   formData.append('event_description', form.description.trim())
   formData.append('contact_email', form.contactEmail.trim())
+  // Always send so clearing the field removes the number on save.
+  formData.append('contact_number', form.contactNumber.trim())
   formData.append('category_uuid', form.categoryUuid)
   formData.append('event_type', form.eventType)
   formData.append('event_config', form.eventConfig)

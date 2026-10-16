@@ -28,6 +28,7 @@ export type PublicEvent = {
   event_name: string
   event_description: string
   contact_email?: string | null
+  contact_number?: string | null
   address: string
   city?: string
   category_name?: string
@@ -247,6 +248,7 @@ export function mapPublicEventToAttraction(
     }),
     todayCutoffTime: event.today_cutoff_time ?? null,
     contactEmail: event.contact_email ?? null,
+    contactNumber: event.contact_number ?? null,
   }
 }
 
@@ -267,6 +269,27 @@ export function mergeCatalogActivities(
   return merged
 }
 
+/** Cuts activity copy at a sentence or word boundary so the hero never ends mid-word. */
+export function featuredDescriptionExcerpt(
+  description: string | undefined,
+  maxLength = 200,
+): string {
+  const fallback =
+    'Book tickets for the best activities and experiences across the Philippines.'
+  const cleaned = (description ?? '').replace(/\s+/g, ' ').trim()
+  if (!cleaned) return fallback
+  if (cleaned.length <= maxLength) return cleaned
+
+  const slice = cleaned.slice(0, maxLength)
+  const sentence = slice.match(/^([\s\S]+?[.!?])(?:\s|$)/)
+  if (sentence && sentence[1].length >= Math.floor(maxLength * 0.45)) {
+    return sentence[1].trim()
+  }
+
+  const atWord = slice.replace(/\s+\S*$/, '').trim()
+  return `${atWord || slice.trim()}…`
+}
+
 export function buildHeroSlides(
   activities: Array<Attraction>,
 ): Array<HeroSlide> {
@@ -284,10 +307,9 @@ export function buildHeroSlides(
       badge: index === 0 ? 'Top Picks' : 'Featured',
       title,
       highlight,
-      subtitle:
-        activity.description.slice(0, 120) ||
-        'Book tickets for the best activities and experiences across the Philippines.',
+      subtitle: featuredDescriptionExcerpt(activity.description),
       location: activity.location,
+      contactNumber: activity.contactNumber ?? null,
       priceFrom: activity.price,
       originalPrice: activity.originalPrice,
       discountPercent: activity.discountPercent,
