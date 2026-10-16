@@ -37,11 +37,15 @@ const inputClassName = cn(
   'placeholder:text-muted-foreground focus:border-paec-violet focus:ring-2 focus:ring-paec-violet/20 focus:outline-none',
 )
 
-function actionButtonClassName(variant: 'view' | 'delete') {
+function actionButtonClassName(variant: 'view' | 'delete' | 'inactive' | 'activate') {
   return cn(
     'rounded-md border bg-white px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     variant === 'view' &&
       'border-violet-200 text-paec-violet hover:border-paec-violet hover:bg-violet-50',
+    variant === 'inactive' &&
+      'border-amber-200 text-amber-700 hover:border-amber-400 hover:bg-amber-50',
+    variant === 'activate' &&
+      'border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50',
     variant === 'delete' &&
       'border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50',
   )
@@ -70,6 +74,9 @@ export function AdminPromoCodesSection() {
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [statusUpdatingUuid, setStatusUpdatingUuid] = useState<string | null>(
+    null,
+  )
   const [createOpen, setCreateOpen] = useState(false)
   const [viewTarget, setViewTarget] = useState<PromoCode | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PromoCode | null>(null)
@@ -129,6 +136,28 @@ export function AdminPromoCodesSection() {
       toast.error(getApiErrorMessage(error, 'Failed to delete promo code.'))
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleSetStatus = async (
+    promo: PromoCode,
+    status: 'active' | 'inactive',
+  ) => {
+    setStatusUpdatingUuid(promo.uuid)
+    try {
+      await promoCodeService.updatePromoCodeStatus(promo.uuid, status)
+      toast.success(
+        status === 'inactive'
+          ? 'Promo code set to inactive.'
+          : 'Promo code activated.',
+      )
+      await fetchPromoCodes()
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, 'Failed to update promo code status.'),
+      )
+    } finally {
+      setStatusUpdatingUuid(null)
     }
   }
 
@@ -221,7 +250,10 @@ export function AdminPromoCodesSection() {
                 <PromoCodeCard
                   key={promo.uuid}
                   promo={promo}
+                  statusUpdating={statusUpdatingUuid === promo.uuid}
                   onView={() => setViewTarget(promo)}
+                  onSetInactive={() => void handleSetStatus(promo, 'inactive')}
+                  onActivate={() => void handleSetStatus(promo, 'active')}
                   onDelete={() => setDeleteTarget(promo)}
                 />
               ))}
@@ -275,7 +307,10 @@ export function AdminPromoCodesSection() {
                   <PromoCodeRow
                     key={promo.uuid}
                     promo={promo}
+                    statusUpdating={statusUpdatingUuid === promo.uuid}
                     onView={() => setViewTarget(promo)}
+                    onSetInactive={() => void handleSetStatus(promo, 'inactive')}
+                    onActivate={() => void handleSetStatus(promo, 'active')}
                     onDelete={() => setDeleteTarget(promo)}
                   />
                 ))
@@ -403,13 +438,22 @@ function formatDiscount(promo: PromoCode) {
 
 function PromoCodeCard({
   promo,
+  statusUpdating,
   onView,
+  onSetInactive,
+  onActivate,
   onDelete,
 }: {
   promo: PromoCode
+  statusUpdating: boolean
   onView: () => void
+  onSetInactive: () => void
+  onActivate: () => void
   onDelete: () => void
 }) {
+  const canDeactivate = promo.status === 'active'
+  const canActivate = promo.status === 'inactive'
+
   return (
     <li className="px-4 py-3.5">
       <div className="flex items-start gap-3">
@@ -457,10 +501,34 @@ function PromoCodeCard({
         >
           View
         </button>
+        {canDeactivate ? (
+          <button
+            type="button"
+            onClick={onSetInactive}
+            disabled={statusUpdating}
+            className={cn(actionButtonClassName('inactive'), 'h-9 text-xs')}
+          >
+            {statusUpdating ? 'Updating…' : 'Inactive'}
+          </button>
+        ) : null}
+        {canActivate ? (
+          <button
+            type="button"
+            onClick={onActivate}
+            disabled={statusUpdating}
+            className={cn(actionButtonClassName('activate'), 'h-9 text-xs')}
+          >
+            {statusUpdating ? 'Updating…' : 'Activate'}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onDelete}
-          className={cn(actionButtonClassName('delete'), 'h-9 text-xs')}
+          className={cn(
+            actionButtonClassName('delete'),
+            'h-9 text-xs',
+            canDeactivate || canActivate ? 'col-span-2' : '',
+          )}
         >
           Delete
         </button>
@@ -471,14 +539,22 @@ function PromoCodeCard({
 
 function PromoCodeRow({
   promo,
+  statusUpdating,
   onView,
+  onSetInactive,
+  onActivate,
   onDelete,
 }: {
   promo: PromoCode
+  statusUpdating: boolean
   onView: () => void
+  onSetInactive: () => void
+  onActivate: () => void
   onDelete: () => void
 }) {
   const displayStatus = getPromoDisplayStatus(promo)
+  const canDeactivate = promo.status === 'active'
+  const canActivate = promo.status === 'inactive'
 
   return (
     <tr className="border-b border-violet-50 transition-colors last:border-0 hover:bg-violet-50/30">
@@ -536,6 +612,26 @@ function PromoCodeRow({
           >
             View
           </button>
+          {canDeactivate ? (
+            <button
+              type="button"
+              onClick={onSetInactive}
+              disabled={statusUpdating}
+              className={actionButtonClassName('inactive')}
+            >
+              {statusUpdating ? 'Updating…' : 'Inactive'}
+            </button>
+          ) : null}
+          {canActivate ? (
+            <button
+              type="button"
+              onClick={onActivate}
+              disabled={statusUpdating}
+              className={actionButtonClassName('activate')}
+            >
+              {statusUpdating ? 'Updating…' : 'Activate'}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onDelete}
