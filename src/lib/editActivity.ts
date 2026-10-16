@@ -92,6 +92,11 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
   if (form.featuredImage) {
     formData.append('featured_image', form.featuredImage)
   }
+  // Tell the API which saved showcase images to keep (removals are dropped from this list).
+  formData.append('sync_event_showcase', '1')
+  form.existingShowcaseImages.forEach((image, index) => {
+    formData.append(`event_showcase_uuids[${index}]`, image.uuid)
+  })
   form.showcaseImages.forEach((file, index) => {
     formData.append(`event_showcase[${index}]`, file)
   })

@@ -66,6 +66,8 @@ export type PublicEventTicket = {
   price: string
   discounted_price?: number | string | null
   description?: string
+  available_from?: string | null
+  available_to?: string | null
 }
 
 export type BrowseByCityLocation = {
@@ -244,6 +246,8 @@ export function mapPublicEventToAttraction(
         price: discounted ? finalPrice : listPrice,
         originalPrice: discounted ? listPrice : undefined,
         description: ticket.description,
+        availableFrom: ticket.available_from ?? null,
+        availableTo: ticket.available_to ?? null,
       }
     }),
     todayCutoffTime: event.today_cutoff_time ?? null,

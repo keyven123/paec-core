@@ -12,7 +12,7 @@ type ShowcaseImagesFieldProps = {
   files: File[]
   existingImages?: ExistingImage[]
   onChange: (files: File[]) => void
-  maxSize?: string
+  onRemoveExisting?: (uuid: string) => void
 }
 
 export function ShowcaseImagesField({
@@ -21,7 +21,7 @@ export function ShowcaseImagesField({
   files,
   existingImages = [],
   onChange,
-  maxSize = 'Max 5MB each, up to 10 images',
+  onRemoveExisting,
 }: ShowcaseImagesFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
@@ -79,7 +79,7 @@ export function ShowcaseImagesField({
           Drag and drop or click to upload multiple files
         </p>
         <p className="mt-1 text-center text-[10px] text-muted-foreground/70">
-          PNG, JPG, JPEG · {maxSize}
+          PNG, JPG, JPEG
         </p>
         <button
           type="button"
@@ -118,6 +118,16 @@ export function ShowcaseImagesField({
                   <Eye className="size-3 text-paec-violet" />
                   Preview
                 </button>
+                {onRemoveExisting ? (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveExisting(image.uuid)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-100"
+                  >
+                    <X className="size-3" />
+                    Remove
+                  </button>
+                ) : null}
               </div>
             </div>
           ))}

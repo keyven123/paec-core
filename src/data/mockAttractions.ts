@@ -6,6 +6,10 @@ export type TicketType = {
   /** Price before the ticket discount; set only when the ticket is discounted. */
   originalPrice?: number
   description?: string
+  /** Visit-date window start (Y-m-d or datetime); inclusive. */
+  availableFrom?: string | null
+  /** Visit-date window end (Y-m-d or datetime); inclusive. */
+  availableTo?: string | null
 }
 
 export type AttractionLocation = {
