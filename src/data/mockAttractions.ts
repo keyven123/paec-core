@@ -43,6 +43,7 @@ export type Attraction = {
   ticketTypes: TicketType[]
   todayCutoffTime?: string | null
   contactEmail?: string | null
+  contactNumber?: string | null
 }
 
 export type HeroSlide = {
@@ -53,6 +54,8 @@ export type HeroSlide = {
   highlight: string
   subtitle: string
   location: string
+  /** Per-activity phone for the featured banner; falls back to site contact. */
+  contactNumber?: string | null
   priceFrom: number
   originalPrice?: number
   discountPercent?: number

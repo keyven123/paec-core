@@ -318,11 +318,29 @@ export function HeroSection({ slides, loading = false }: HeroSectionProps) {
               <span className="text-paec-orange">{slide.highlight}</span>
             </h1>
 
-            <p className="mt-5 line-clamp-3 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
-              {slide.subtitle}
-            </p>
+            <div className="mt-6 max-w-xl">
+              <div className="flex gap-4">
+                <span
+                  className="mt-1.5 hidden h-14 w-px shrink-0 bg-gradient-to-b from-paec-orange via-paec-orange/45 to-transparent sm:block"
+                  aria-hidden
+                />
+                <div className="min-w-0">
+                  <p className="text-[15px] leading-[1.75] text-white/78 sm:text-base sm:leading-[1.8]">
+                    {slide.subtitle}
+                  </p>
+                  <Link
+                    to="/attractions/$attractionId"
+                    params={{ attractionId: slide.attractionId }}
+                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium tracking-wide text-paec-orange transition-colors hover:text-paec-orange-light"
+                  >
+                    Continue reading
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/75">
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/75">
               <a
                 href={getGoogleMapsHref(slide.location)}
                 target="_blank"
@@ -333,16 +351,22 @@ export function HeroSection({ slides, loading = false }: HeroSectionProps) {
                 <MapPin className="size-4 shrink-0 text-paec-orange" />
                 {slide.location}
               </a>
-              {contact.contact_phone ? (
-                <a
-                  href={getPhoneHref(contact.contact_phone)}
-                  className="inline-flex items-center gap-2 underline-offset-4 transition-colors hover:text-white hover:underline"
-                  title="Call us"
-                >
-                  <Phone className="size-4 shrink-0 text-paec-orange" />
-                  {contact.contact_phone}
-                </a>
-              ) : null}
+              {(() => {
+                const phone =
+                  slide.contactNumber?.trim() ||
+                  (contact.contact_phone ? contact.contact_phone.trim() : '')
+                if (!phone) return null
+                return (
+                  <a
+                    href={getPhoneHref(phone)}
+                    className="inline-flex items-center gap-2 underline-offset-4 transition-colors hover:text-white hover:underline"
+                    title="Call us"
+                  >
+                    <Phone className="size-4 shrink-0 text-paec-orange" />
+                    {phone}
+                  </a>
+                )
+              })()}
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">

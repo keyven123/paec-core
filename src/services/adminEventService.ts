@@ -30,6 +30,7 @@ export type AdminEvent = {
   event_name: string
   event_description: string
   contact_email: string
+  contact_number?: string | null
   address: string
   city: string
   event_type: string
@@ -132,7 +133,10 @@ export type EventTicketsSold = {
   ticket_sold: number
 }
 
-function downloadCsvBlob(response: AxiosResponse<Blob>, defaultFilename: string) {
+function downloadCsvBlob(
+  response: AxiosResponse<Blob>,
+  defaultFilename: string,
+) {
   const contentDisposition = response.headers['content-disposition']
   let filename = defaultFilename
 
@@ -154,7 +158,9 @@ function downloadCsvBlob(response: AxiosResponse<Blob>, defaultFilename: string)
 
 export const adminEventService = {
   async getEventDetails(uuid: string): Promise<{ data: AdminEvent }> {
-    const { data } = await adminApi.get<{ data: AdminEvent }>(`/v1/events/${uuid}`)
+    const { data } = await adminApi.get<{ data: AdminEvent }>(
+      `/v1/events/${uuid}`,
+    )
     return data
   },
 
@@ -252,7 +258,10 @@ export const adminEventService = {
     await adminApi.delete(`/v1/events/${uuid}`)
   },
 
-  async updateEvent(uuid: string, data: FormData): Promise<{ data: AdminEvent }> {
+  async updateEvent(
+    uuid: string,
+    data: FormData,
+  ): Promise<{ data: AdminEvent }> {
     // PHP only parses multipart file uploads on POST, not PUT.
     const response = await adminApi.post<{ data: AdminEvent }>(
       `/v1/events/${uuid}`,
@@ -261,7 +270,9 @@ export const adminEventService = {
     return response.data
   },
 
-  async listActivitiesForFeaturing(perPage = 200): Promise<FeaturedActivityItem[]> {
+  async listActivitiesForFeaturing(
+    perPage = 200,
+  ): Promise<FeaturedActivityItem[]> {
     const { data } = await adminApi.get<PaginatedAdminEvents>('/v1/events', {
       params: {
         per_page: perPage,
@@ -337,9 +348,12 @@ export const adminEventService = {
       total: number
     }
   }> {
-    const { data } = await adminApi.get(`/v1/events/${uuid}/scanned-attendees`, {
-      params,
-    })
+    const { data } = await adminApi.get(
+      `/v1/events/${uuid}/scanned-attendees`,
+      {
+        params,
+      },
+    )
     return data
   },
 }

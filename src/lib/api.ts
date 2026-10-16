@@ -1,6 +1,4 @@
-import axios from 'axios'
-
-import { isTokenValid } from '@/lib/tokenUtils'
+import axios, { type InternalAxiosRequestConfig } from 'axios'
 
 /**
  * Resolve API base URL for local (relative / Vite proxy) and Vercel → Hostinger.
@@ -36,6 +34,8 @@ export const CUSTOMER_TOKEN_KEY = 'paec_token'
 export const ADMIN_TOKEN_KEY = 'paec_admin_token'
 const ADMIN_PROFILE_KEY = 'paec_admin'
 
+type AdminRetryConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+
 function redirectToAdminLogin() {
   if (typeof window === 'undefined') return
   if (window.location.pathname.startsWith('/admin/login')) return
@@ -49,6 +49,45 @@ function clearAdminSession() {
 
 function getAdminTokenFromStorage(): string | null {
   return localStorage.getItem(ADMIN_TOKEN_KEY)
+}
+
+/** Shared in-flight refresh so concurrent 401s only refresh once. */
+let adminRefreshPromise: Promise<string | null> | null = null
+
+async function refreshAdminAccessToken(): Promise<string | null> {
+  const token = getAdminTokenFromStorage()
+  if (!token) return null
+
+  if (!adminRefreshPromise) {
+    adminRefreshPromise = axios
+      .post<{ access_token?: string }>(
+        `${API_BASE_URL}/v1/admin/refresh`,
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        },
+      )
+      .then((res) => {
+        const newToken = res.data?.access_token
+        if (!newToken) return null
+        localStorage.setItem(ADMIN_TOKEN_KEY, newToken)
+        return newToken
+      })
+      .catch(() => null)
+      .finally(() => {
+        adminRefreshPromise = null
+      })
+  }
+
+  return adminRefreshPromise
+}
+
+function isAdminAuthEndpoint(url: string | undefined): boolean {
+  const path = String(url ?? '')
+  return path.includes('/admin/login') || path.includes('/admin/refresh')
 }
 
 export const api = axios.create({
@@ -79,12 +118,6 @@ adminApi.interceptors.request.use((config) => {
   const token = getAdminTokenFromStorage()
 
   if (token) {
-    if (!isTokenValid(token)) {
-      clearAdminSession()
-      redirectToAdminLogin()
-      return Promise.reject(new Error('Admin session expired'))
-    }
-
     config.headers.Authorization = `Bearer ${token}`
   }
 
@@ -101,11 +134,27 @@ api.interceptors.response.use(
 
 adminApi.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error.response?.status
     const message = error.response?.data?.message
+    const original = error.config as AdminRetryConfig | undefined
+    const unauthorized = status === 401 || message === 'Unauthenticated.'
 
-    if (status === 401 || message === 'Unauthenticated.') {
+    if (
+      unauthorized &&
+      original &&
+      !original._retry &&
+      !isAdminAuthEndpoint(original.url)
+    ) {
+      original._retry = true
+      const newToken = await refreshAdminAccessToken()
+
+      if (newToken) {
+        original.headers = original.headers ?? {}
+        original.headers.Authorization = `Bearer ${newToken}`
+        return adminApi(original)
+      }
+
       clearAdminSession()
       redirectToAdminLogin()
     }

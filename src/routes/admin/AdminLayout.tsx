@@ -6,12 +6,10 @@ import type { AdminUser } from '@/lib/adminAuth'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import {
-  getAdminToken,
   getStoredAdmin,
   isAdminAuthenticated,
   signOutAdmin,
 } from '@/lib/adminAuth'
-import { isTokenValid } from '@/lib/tokenUtils'
 import {
   VENUE_INQUIRY_VIEWED_EVENT,
   venueListingService,
@@ -65,8 +63,7 @@ export function AdminLayout() {
   const newInquiryCount = useNewVenueInquiryCount(pathname)
 
   useEffect(() => {
-    const token = getAdminToken()
-    if (!isAdminAuthenticated() || !isTokenValid(token)) {
+    if (!isAdminAuthenticated()) {
       void signOutAdmin()
       navigate({ to: '/admin/login' })
     }

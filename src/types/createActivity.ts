@@ -21,15 +21,17 @@ export type CreateActivityForm = {
   name: string
   description: string
   contactEmail: string
+  /** Per-activity phone shown on the storefront for this attraction. */
+  contactNumber: string
   category: string
   categoryUuid: string
   address: string
   city: string
   portraitImage: File | null
   featuredImage: File | null
-  showcaseImages: File[]
-  tickets: CreateActivityTicket[]
-  attendeeFields: AttendeeField[]
+  showcaseImages: Array<File>
+  tickets: Array<CreateActivityTicket>
+  attendeeFields: Array<AttendeeField>
   /** Selected gateways (at most one per provider); only their uuids are submitted. */
   paymentGateways: Array<PaymentGatewayOption>
 }
@@ -51,6 +53,7 @@ export const initialCreateActivityForm: CreateActivityForm = {
   name: '',
   description: '',
   contactEmail: '',
+  contactNumber: '',
   category: '',
   categoryUuid: '',
   city: '',

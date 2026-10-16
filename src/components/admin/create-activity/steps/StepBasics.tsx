@@ -1,13 +1,13 @@
-import { categories } from '@/data/mockAttractions'
+import { fieldClassName, labelClassName, sectionClassName } from '../formStyles'
 import type { CreateActivityForm } from '@/types/createActivity'
 import type { EditActivityForm } from '@/types/editActivity'
+import { categories } from '@/data/mockAttractions'
 
-import { fieldClassName, labelClassName, sectionClassName } from '../formStyles'
 
 type StepBasicsProps = {
   form: CreateActivityForm | EditActivityForm
   onChange: (updates: Partial<CreateActivityForm | EditActivityForm>) => void
-  categories?: { uuid: string; name: string }[]
+  categories?: Array<{ uuid: string; name: string }>
   useCategoryUuid?: boolean
 }
 
@@ -68,39 +68,54 @@ export function StepBasics({
               />
             </div>
             <div>
-              <label className={labelClassName}>
-                Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={useCategoryUuid ? editForm.categoryUuid : form.category}
-                onChange={(e) => {
-                  if (useCategoryUuid) {
-                    const selected = apiCategories?.find(
-                      (cat) => cat.uuid === e.target.value,
-                    )
-                    onChange({
-                      categoryUuid: e.target.value,
-                      category: selected?.name ?? '',
-                    } as Partial<EditActivityForm>)
-                  } else {
-                    onChange({ category: e.target.value })
-                  }
-                }}
+              <label className={labelClassName}>Contact Number</label>
+              <input
+                type="tel"
+                value={form.contactNumber}
+                onChange={(e) => onChange({ contactNumber: e.target.value })}
+                placeholder="e.g. +63 928 297 5671"
                 className={`${fieldClassName} mt-1.5`}
-              >
-                <option value="">Select Category</option>
-                {(useCategoryUuid ? apiCategories ?? [] : activityCategories).map(
-                  (cat) => (
-                    <option
-                      key={'uuid' in cat ? cat.uuid : cat.id}
-                      value={'uuid' in cat ? cat.uuid : cat.label}
-                    >
-                      {'name' in cat ? cat.name : cat.label}
-                    </option>
-                  ),
-                )}
-              </select>
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Shown on this activity’s storefront page and featured banner.
+              </p>
             </div>
+          </div>
+
+          <div>
+            <label className={labelClassName}>
+              Category <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={useCategoryUuid ? editForm.categoryUuid : form.category}
+              onChange={(e) => {
+                if (useCategoryUuid) {
+                  const selected = apiCategories?.find(
+                    (cat) => cat.uuid === e.target.value,
+                  )
+                  onChange({
+                    categoryUuid: e.target.value,
+                    category: selected?.name ?? '',
+                  })
+                } else {
+                  onChange({ category: e.target.value })
+                }
+              }}
+              className={`${fieldClassName} mt-1.5`}
+            >
+              <option value="">Select Category</option>
+              {(useCategoryUuid
+                ? (apiCategories ?? [])
+                : activityCategories
+              ).map((cat) => (
+                <option
+                  key={'uuid' in cat ? cat.uuid : cat.id}
+                  value={'uuid' in cat ? cat.uuid : cat.label}
+                >
+                  {'name' in cat ? cat.name : cat.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
