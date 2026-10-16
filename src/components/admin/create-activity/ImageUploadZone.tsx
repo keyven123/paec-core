@@ -37,7 +37,7 @@ export function ImageUploadZone({
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList?.length) return
     const next = multiple
-      ? [...files, ...Array.from(fileList)].slice(0, 10)
+      ? [...files, ...Array.from(fileList)]
       : [fileList[0]]
     onChange(next)
     if (inputRef.current) {
