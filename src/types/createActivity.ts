@@ -27,6 +27,7 @@ export type CreateActivityForm = {
   categoryUuid: string
   address: string
   city: string
+  logoImage: File | null
   portraitImage: File | null
   featuredImage: File | null
   showcaseImages: Array<File>
@@ -58,6 +59,7 @@ export const initialCreateActivityForm: CreateActivityForm = {
   categoryUuid: '',
   city: '',
   address: '',
+  logoImage: null,
   portraitImage: null,
   featuredImage: null,
   showcaseImages: [],

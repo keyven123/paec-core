@@ -49,11 +49,27 @@ function ReviewBlock({
   )
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({
+  label,
+  value,
+  preserveWhitespace = false,
+}: {
+  label: string
+  value: string
+  preserveWhitespace?: boolean
+}) {
   return (
     <div>
       <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm text-foreground">{value || '—'}</p>
+      <p
+        className={
+          preserveWhitespace
+            ? 'mt-0.5 whitespace-pre-line text-sm text-foreground'
+            : 'mt-0.5 text-sm text-foreground'
+        }
+      >
+        {value || '—'}
+      </p>
     </div>
   )
 }
@@ -196,7 +212,11 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
             <Field label="City" value={form.city} />
             <Field label="Address" value={form.address} />
             <div className="sm:col-span-2">
-              <Field label="Description" value={form.description} />
+              <Field
+                label="Description"
+                value={form.description}
+                preserveWhitespace
+              />
             </div>
           </div>
         </ReviewBlock>

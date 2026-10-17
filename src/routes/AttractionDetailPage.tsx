@@ -269,7 +269,7 @@ export function AttractionDetailPage() {
               <h2 className="text-xl font-bold text-foreground">
                 About this event
               </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {truncated}
               </p>
               {attraction.description.length > 220 && (

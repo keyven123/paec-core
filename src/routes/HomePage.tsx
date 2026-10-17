@@ -13,12 +13,15 @@ import {
   ALL_CATEGORIES,
   buildActivityCategories,
 } from '@/lib/activityCategories'
+import { pickFlashSales, type FlashSaleInfo } from '@/lib/flashSale'
 import {
   buildHeroSlides,
   marketplaceService,
   mergeCatalogActivities,
 } from '@/services/marketplaceService'
 import { venueListingService } from '@/services/venueListingService'
+
+const FLASH_SALE_SCAN_LIMIT = 8
 
 export function HomePage() {
   const [activeCategory, setActiveCategory] = useState(ALL_CATEGORIES)
@@ -28,6 +31,7 @@ export function HomePage() {
   >([])
   const [promoActivities, setPromoActivities] = useState<Array<Attraction>>([])
   const [venues, setVenues] = useState<Array<PublicVenueListing>>([])
+  const [flashSales, setFlashSales] = useState<FlashSaleInfo[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -67,6 +71,36 @@ export function HomePage() {
     }
   }, [])
 
+  useEffect(() => {
+    const source =
+      featuredActivities.length > 0 ? featuredActivities : activities
+    if (source.length === 0) {
+      setFlashSales([])
+      return
+    }
+
+    let cancelled = false
+
+    async function loadFlashSales() {
+      const sample = source.slice(0, FLASH_SALE_SCAN_LIMIT)
+      const entries = await Promise.all(
+        sample.map(async (activity) => ({
+          activity,
+          tickets: await marketplaceService.getEventTickets(activity.eventUuid),
+        })),
+      )
+      if (!cancelled) {
+        setFlashSales(pickFlashSales(entries))
+      }
+    }
+
+    void loadFlashSales()
+
+    return () => {
+      cancelled = true
+    }
+  }, [featuredActivities, activities])
+
   const catalogActivities = useMemo(
     () => mergeCatalogActivities(activities, featuredActivities),
     [activities, featuredActivities],
@@ -91,7 +125,11 @@ export function HomePage() {
     <div className="min-h-screen bg-white">
       <Header />
       <main>
-        <HeroSection slides={heroSlides} loading={loading} />
+        <HeroSection
+          slides={heroSlides}
+          flashSales={flashSales}
+          loading={loading}
+        />
         <CategorySection
           categories={categoryOptions}
           activeCategory={selectedCategory}

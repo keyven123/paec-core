@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   CalendarDays,
   CreditCard,
   Loader2,
@@ -13,6 +14,10 @@ import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import type { AdminTransactionDetail } from '@/services/adminTransactionService'
+import {
+  AdminRescheduleTicketsPanel,
+  canRescheduleTransaction,
+} from '@/components/admin/AdminRescheduleTicketsPanel'
 import {
   AdminSendTicketsPanel,
   getSendableTickets,
@@ -101,6 +106,7 @@ export function AdminTransactionDetailModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sendOpen, setSendOpen] = useState(false)
+  const [rescheduleOpen, setRescheduleOpen] = useState(false)
 
   const load = useCallback(async (uuid: string) => {
     setLoading(true)
@@ -117,6 +123,7 @@ export function AdminTransactionDetailModal({
   useEffect(() => {
     setTransaction(null)
     setSendOpen(false)
+    setRescheduleOpen(false)
     if (transactionUuid) void load(transactionUuid)
   }, [transactionUuid, load])
 
@@ -139,12 +146,35 @@ export function AdminTransactionDetailModal({
   const canSend =
     transaction?.payment_status === 'paid' &&
     getSendableTickets(tickets).length > 0
+  const canReschedule = canRescheduleTransaction(transaction)
   const orders = transaction?.transaction_orders ?? []
   const scheduleStart = formatTime(transaction?.schedule_time?.time_start)
   const scheduleEnd = formatTime(transaction?.schedule_time?.time_end)
   const discount = Number(transaction?.display_discount ?? 0)
   const taxes = Number(transaction?.tax_amount ?? 0)
   const usedCount = tickets.filter((ticket) => ticket.status === 'used').length
+
+  const ticketTypeLabel = (() => {
+    const fromOrders = orders
+      .map((order) => {
+        const name = order.event_ticket?.name?.trim()
+        if (!name) return null
+        const qty = order.quantity ?? 0
+        return qty > 1 ? `${name} × ${qty}` : name
+      })
+      .filter((value): value is string => Boolean(value))
+
+    if (fromOrders.length > 0) return fromOrders.join(', ')
+
+    const uniqueTypes = [
+      ...new Set(
+        issuedTickets
+          .map((ticket) => ticket.ticket_type?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ]
+    return uniqueTypes.length > 0 ? uniqueTypes.join(', ') : null
+  })()
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -180,10 +210,33 @@ export function AdminTransactionDetailModal({
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {canReschedule ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setRescheduleOpen((open) => !open)
+                  setSendOpen(false)
+                }}
+                aria-expanded={rescheduleOpen}
+                aria-label="Reschedule"
+                className={cn(
+                  'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors',
+                  rescheduleOpen
+                    ? 'bg-paec-violet text-white hover:bg-paec-violet/90'
+                    : 'border border-violet-200 text-paec-violet hover:bg-violet-50',
+                )}
+              >
+                <CalendarClock className="size-4" />
+                <span className="hidden sm:inline">Reschedule</span>
+              </button>
+            ) : null}
             {canSend ? (
               <button
                 type="button"
-                onClick={() => setSendOpen((open) => !open)}
+                onClick={() => {
+                  setSendOpen((open) => !open)
+                  setRescheduleOpen(false)
+                }}
                 aria-expanded={sendOpen}
                 aria-label="Send to Email"
                 className={cn(
@@ -227,6 +280,17 @@ export function AdminTransactionDetailModal({
             </div>
           ) : transaction ? (
             <div className="space-y-5">
+              {rescheduleOpen && canReschedule ? (
+                <AdminRescheduleTicketsPanel
+                  key={`reschedule-${transaction.uuid}-${getVisitDate(transaction) ?? 'none'}`}
+                  transaction={transaction}
+                  onCancel={() => setRescheduleOpen(false)}
+                  onSaved={() => {
+                    setRescheduleOpen(false)
+                    void load(transaction.uuid)
+                  }}
+                />
+              ) : null}
               {sendOpen && canSend ? (
                 <AdminSendTicketsPanel
                   key={transaction.uuid}
@@ -267,6 +331,7 @@ export function AdminTransactionDetailModal({
                         : scheduleStart}
                     </InfoRow>
                   ) : null}
+                  <InfoRow label="Ticket type">{ticketTypeLabel}</InfoRow>
                   <InfoRow label="Tickets">
                     {issuedTickets.length}
                     {usedCount > 0 ? ` (${usedCount} used)` : ''}

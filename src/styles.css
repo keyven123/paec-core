@@ -127,3 +127,165 @@ code {
 .font-serif {
   font-family: "Playfair Display", Georgia, "Times New Roman", serif;
 }
+
+@keyframes flash-sale-label-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(249, 115, 22, 0.55),
+      0 0 12px rgba(249, 115, 22, 0.25);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow:
+      0 0 0 8px rgba(249, 115, 22, 0),
+      0 0 22px rgba(249, 115, 22, 0.55);
+  }
+}
+
+@keyframes flash-sale-label-shimmer {
+  0% {
+    background-position: 140% 50%;
+  }
+  100% {
+    background-position: -40% 50%;
+  }
+}
+
+@keyframes flash-sale-title-glow {
+  0%,
+  100% {
+    text-shadow:
+      0 0 0 transparent,
+      0 1px 2px rgba(0, 0, 0, 0.45);
+  }
+  50% {
+    text-shadow:
+      0 0 14px rgba(249, 115, 22, 0.7),
+      0 0 28px rgba(249, 115, 22, 0.35),
+      0 1px 2px rgba(0, 0, 0, 0.45);
+  }
+}
+
+@keyframes flash-sale-border-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--flash-glow) 25%, transparent),
+      0 10px 30px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--flash-glow) 55%, transparent),
+      0 0 28px color-mix(in srgb, var(--flash-glow) 35%, transparent),
+      0 10px 30px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.flash-sale-card {
+  --flash-glow: #f97316;
+  animation: flash-sale-border-glow 2.2s ease-in-out infinite;
+}
+
+.flash-sale-card-live {
+  --flash-glow: #f87171;
+}
+
+.flash-sale-label {
+  animation: flash-sale-label-pulse 1.7s ease-in-out infinite;
+}
+
+.flash-sale-label-text {
+  background-image: linear-gradient(
+    110deg,
+    #ffffff 0%,
+    #ffffff 36%,
+    #fdba74 48%,
+    #ffffff 60%,
+    #ffffff 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: flash-sale-label-shimmer 2.2s linear infinite;
+}
+
+.flash-sale-title {
+  color: #ffffff;
+  animation: flash-sale-title-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes flash-ticket-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes flash-ticket-glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(249, 115, 22, 0.35),
+      0 4px 14px rgba(249, 115, 22, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(249, 115, 22, 0.12),
+      0 0 22px rgba(249, 115, 22, 0.4),
+      0 4px 18px rgba(239, 68, 68, 0.18);
+  }
+}
+
+/* Animated gradient ring around booking / admin ticket cards */
+.flash-sale-ticket-wrap {
+  border-radius: 0.75rem;
+  padding: 2px;
+  background: linear-gradient(
+    110deg,
+    #f97316 0%,
+    #ef4444 25%,
+    #fbbf24 50%,
+    #7c3aed 75%,
+    #f97316 100%
+  );
+  background-size: 220% 100%;
+  animation:
+    flash-ticket-border-flow 2.6s linear infinite,
+    flash-ticket-glow-pulse 2s ease-in-out infinite;
+}
+
+.flash-sale-ticket-wrap > .flash-sale-ticket-inner {
+  border-radius: calc(0.75rem - 2px);
+}
+
+.flash-sale-ticket-badge {
+  animation: flash-sale-label-pulse 1.7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-sale-card,
+  .flash-sale-label,
+  .flash-sale-label-text,
+  .flash-sale-title,
+  .flash-sale-ticket-wrap,
+  .flash-sale-ticket-badge {
+    animation: none;
+  }
+
+  .flash-sale-ticket-wrap {
+    background: linear-gradient(110deg, #f97316, #ef4444);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+  }
+
+  .flash-sale-label-text {
+    color: #ffffff;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+  }
+}

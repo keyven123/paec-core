@@ -35,6 +35,7 @@ import { AdminLoginPage } from './routes/AdminLoginPage'
 import { AttractionDetailPage } from './routes/AttractionDetailPage'
 import { CheckoutPage } from './routes/CheckoutPage'
 import { FeaturedActivitiesPage } from './routes/FeaturedActivitiesPage'
+import { FlashSalesPage } from './routes/FlashSalesPage'
 import { HomePage } from './routes/HomePage'
 import { InfoPage } from './routes/InfoPage'
 import { OrderSuccessPage } from './routes/OrderSuccessPage'
@@ -85,6 +86,12 @@ const featuredRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/featured',
   component: FeaturedActivitiesPage,
+})
+
+const flashSalesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/flash-sales',
+  component: FlashSalesPage,
 })
 
 const infoPageRoute = createRoute({
@@ -269,6 +276,7 @@ const routeTree = rootRoute.addChildren([
   attractionRoute,
   venueRoute,
   featuredRoute,
+  flashSalesRoute,
   infoPageRoute,
   checkoutRoute,
   checkoutSuccessRoute,

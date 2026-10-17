@@ -460,59 +460,14 @@ export function AdminDashboardHome({ user }: AdminDashboardHomeProps) {
       <div className="grid gap-4 sm:gap-5 xl:grid-cols-5">
         <Card className="flex flex-col pb-5 xl:col-span-3">
           <CardHeader
-            title="Revenue Overview"
-            subtitle={
-              overview ? (
-                <>
-                  <span className="font-semibold text-foreground">
-                    {peso(periodRevenue)}
-                  </span>{' '}
-                  · {periodTitle}
-                </>
-              ) : (
-                periodTitle
-              )
-            }
-            action={
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span className="size-2 rounded-full bg-paec-violet" />
-                Revenue
-              </span>
-            }
-          />
-          <div className="mt-4 flex-1 px-5">
-            {showSkeleton ? (
-              <div className="h-[260px] animate-pulse rounded-xl bg-violet-50/70" />
-            ) : (
-              <RevenueBarChart
-                data={series}
-                formatTooltipDate={(bar) =>
-                  period === 'year'
-                    ? parseDate(bar.date).toLocaleDateString('en-US', {
-                        month: 'long',
-                        year: 'numeric',
-                      })
-                    : parseDate(bar.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })
-                }
-              />
-            )}
-          </div>
-        </Card>
-
-        <Card className="flex flex-col pb-5 xl:col-span-2">
-          <CardHeader
             title="Upcoming Visits"
             subtitle="Booked dates in the next 60 days"
             action={<ViewAllLink to="/admin/transaction" />}
           />
           <div className="mt-4 flex-1 px-5">
             {showSkeleton ? (
-              <div className="grid grid-cols-2 gap-3">
-                {[0, 1].map((key) => (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {[0, 1, 2].map((key) => (
                   <div
                     key={key}
                     className="h-[220px] animate-pulse rounded-xl bg-violet-50/70"
@@ -580,6 +535,51 @@ export function AdminDashboardHome({ user }: AdminDashboardHomeProps) {
                   )
                 })}
               </ul>
+            )}
+          </div>
+        </Card>
+
+        <Card className="flex flex-col pb-5 xl:col-span-2">
+          <CardHeader
+            title="Revenue Overview"
+            subtitle={
+              overview ? (
+                <>
+                  <span className="font-semibold text-foreground">
+                    {peso(periodRevenue)}
+                  </span>{' '}
+                  · {periodTitle}
+                </>
+              ) : (
+                periodTitle
+              )
+            }
+            action={
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="size-2 rounded-full bg-paec-violet" />
+                Revenue
+              </span>
+            }
+          />
+          <div className="mt-4 flex-1 px-5">
+            {showSkeleton ? (
+              <div className="h-[260px] animate-pulse rounded-xl bg-violet-50/70" />
+            ) : (
+              <RevenueBarChart
+                data={series}
+                formatTooltipDate={(bar) =>
+                  period === 'year'
+                    ? parseDate(bar.date).toLocaleDateString('en-US', {
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : parseDate(bar.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                }
+              />
             )}
           </div>
         </Card>

@@ -319,7 +319,7 @@ export function AdminActivityTicketFormFields({
         <div>
           <FieldLabel
             htmlFor={`${idPrefix}-available-from`}
-            label="Available From"
+            label="Visit Available From"
             optional
           />
           <div className="flex gap-2">
@@ -346,12 +346,16 @@ export function AdminActivityTicketFormFields({
               <X className="size-4" />
             </button>
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Limits which Date of Visit customers can choose. Leave empty for any
+            date.
+          </p>
           <FieldError message={fieldError('available_from')} />
         </div>
         <div>
           <FieldLabel
             htmlFor={`${idPrefix}-available-to`}
-            label="Available To"
+            label="Visit Available To"
             optional
           />
           <div className="flex gap-2">
@@ -507,6 +511,28 @@ export function AdminActivityTicketFormFields({
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              checked={formData.feature_on_flash_sale}
+              onChange={(event) =>
+                setFormData({
+                  ...formData,
+                  feature_on_flash_sale: event.target.checked,
+                  ...(event.target.checked
+                    ? {}
+                    : { flash_sale_from: '', flash_sale_to: '' }),
+                })
+              }
+              className="size-4 rounded border-violet-200 accent-paec-violet"
+            />
+            <span className="flex items-center gap-1">
+              Flash to Featured
+              <InfoTip text="Show this ticket as a flash sale on the homepage. Use Flash Sale From / To for the purchase countdown window. Visit Available From / To still control which Date of Visit customers may pick." />
+            </span>
+          </label>
+        </div>
+        <div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
               checked={formData.ticket_limit_per_user !== null}
               onChange={(event) => {
                 const enabled = event.target.checked
@@ -526,7 +552,94 @@ export function AdminActivityTicketFormFields({
           </label>
           <FieldError message={fieldError('ticket_limit_per_user')} />
         </div>
-        {formData.ticket_limit_per_user !== null ? (
+      </div>
+
+      {formData.feature_on_flash_sale ? (
+        <div className="grid grid-cols-1 gap-4 rounded-xl border border-orange-200 bg-orange-50/40 p-4 sm:grid-cols-2">
+          <div>
+            <FieldLabel
+              htmlFor={`${idPrefix}-flash-sale-from`}
+              label="Flash Sale From"
+              required
+            />
+            <div className="flex gap-2">
+              <input
+                id={`${idPrefix}-flash-sale-from`}
+                type="datetime-local"
+                value={formData.flash_sale_from}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    flash_sale_from: event.target.value,
+                  })
+                }
+                className={cn(
+                  inputClassName,
+                  'flex-1',
+                  fieldError('flash_sale_from') && inputErrorClassName,
+                )}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, flash_sale_from: '' })
+                }
+                disabled={!formData.flash_sale_from}
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-violet-200 text-muted-foreground hover:bg-violet-50 disabled:opacity-40"
+                title="Clear"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              When the flash sale starts (purchase + homepage countdown).
+            </p>
+            <FieldError message={fieldError('flash_sale_from')} />
+          </div>
+          <div>
+            <FieldLabel
+              htmlFor={`${idPrefix}-flash-sale-to`}
+              label="Flash Sale To"
+              required
+            />
+            <div className="flex gap-2">
+              <input
+                id={`${idPrefix}-flash-sale-to`}
+                type="datetime-local"
+                value={formData.flash_sale_to}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    flash_sale_to: event.target.value,
+                  })
+                }
+                className={cn(
+                  inputClassName,
+                  'flex-1',
+                  fieldError('flash_sale_to') && inputErrorClassName,
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, flash_sale_to: '' })}
+                disabled={!formData.flash_sale_to}
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-violet-200 text-muted-foreground hover:bg-violet-50 disabled:opacity-40"
+                title="Clear"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              When the flash sale ends. Visit dates stay controlled by Visit
+              Available From / To.
+            </p>
+            <FieldError message={fieldError('flash_sale_to')} />
+          </div>
+        </div>
+      ) : null}
+
+      {formData.ticket_limit_per_user !== null ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <FieldLabel
               htmlFor={`${idPrefix}-ticket-limit-per-user`}
@@ -553,8 +666,8 @@ export function AdminActivityTicketFormFields({
               )}
             />
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
@@ -612,43 +725,106 @@ export function AdminActivityTicketFormFields({
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          checked={formData.is_virtual}
+          checked={formData.with_operations}
           onChange={(event) =>
-            setFormData({ ...formData, is_virtual: event.target.checked })
+            setFormData({
+              ...formData,
+              with_operations: event.target.checked,
+              ...(event.target.checked
+                ? {}
+                : {
+                    operation_days: 'any' as const,
+                    operation_hours_from: '',
+                    operation_hours_to: '',
+                  }),
+            })
           }
           className="size-4 rounded border-violet-200 accent-paec-violet"
         />
         <span className="flex items-center gap-1">
-          Virtual Activity
-          <InfoTip text="When selected, this ticket is for a virtual or online event." />
+          Operations
+          <InfoTip text="Limit this ticket to weekdays or weekends, and set operation hours so customers can pick a visit time." />
         </span>
       </label>
-      <FieldError message={fieldError('is_virtual')} />
 
-      {formData.is_virtual ? (
-        <div>
-          <FieldLabel
-            htmlFor={`${idPrefix}-virtual-event-url`}
-            label="Virtual Activity Link"
-            required
-          />
-          <input
-            id={`${idPrefix}-virtual-event-url`}
-            type="url"
-            value={formData.virtual_event_url}
-            onChange={(event) =>
-              setFormData({ ...formData, virtual_event_url: event.target.value })
-            }
-            placeholder="https://example.com/virtual-event"
-            className={cn(
-              inputClassName,
-              fieldError('virtual_event_url') && inputErrorClassName,
-            )}
-          />
-          <FieldError message={fieldError('virtual_event_url')} />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Required when ticket is marked as virtual.
-          </p>
+      {formData.with_operations ? (
+        <div className="grid grid-cols-1 gap-4 rounded-xl border border-violet-100 bg-violet-50/30 p-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <FieldLabel
+              htmlFor={`${idPrefix}-operation-days`}
+              label="Available days"
+            />
+            <select
+              id={`${idPrefix}-operation-days`}
+              value={formData.operation_days}
+              onChange={(event) =>
+                setFormData({
+                  ...formData,
+                  operation_days: event.target.value as
+                    | 'any'
+                    | 'weekdays'
+                    | 'weekends',
+                })
+              }
+              className={inputClassName}
+            >
+              <option value="any">Any day</option>
+              <option value="weekdays">Weekdays only (Mon–Fri)</option>
+              <option value="weekends">Weekends only (Sat–Sun)</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Customers can only book a Date of Visit on these days.
+            </p>
+          </div>
+          <div>
+            <FieldLabel
+              htmlFor={`${idPrefix}-operation-hours-from`}
+              label="Operation hours from"
+              optional
+            />
+            <input
+              id={`${idPrefix}-operation-hours-from`}
+              type="time"
+              value={formData.operation_hours_from}
+              onChange={(event) =>
+                setFormData({
+                  ...formData,
+                  operation_hours_from: event.target.value,
+                })
+              }
+              className={cn(
+                inputClassName,
+                fieldError('operation_hours_from') && inputErrorClassName,
+              )}
+            />
+            <FieldError message={fieldError('operation_hours_from')} />
+          </div>
+          <div>
+            <FieldLabel
+              htmlFor={`${idPrefix}-operation-hours-to`}
+              label="Operation hours to"
+              optional
+            />
+            <input
+              id={`${idPrefix}-operation-hours-to`}
+              type="time"
+              value={formData.operation_hours_to}
+              onChange={(event) =>
+                setFormData({
+                  ...formData,
+                  operation_hours_to: event.target.value,
+                })
+              }
+              className={cn(
+                inputClassName,
+                fieldError('operation_hours_to') && inputErrorClassName,
+              )}
+            />
+            <FieldError message={fieldError('operation_hours_to')} />
+            <p className="mt-1 text-xs text-muted-foreground">
+              When set, customers choose a visit time within this window.
+            </p>
+          </div>
         </div>
       ) : null}
 

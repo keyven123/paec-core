@@ -212,4 +212,26 @@ export const adminTransactionService = {
     )
     return data
   },
+
+  async reschedule(
+    uuid: string,
+    visitDate: string,
+  ): Promise<{
+    success: boolean
+    message: string
+    visit_date: string
+    ticket_count: number
+    data: AdminTransactionDetail
+  }> {
+    const { data } = await adminApi.post<{
+      success: boolean
+      message: string
+      visit_date: string
+      ticket_count: number
+      data: AdminTransactionDetail
+    }>(`/v1/transactions/${uuid}/reschedule`, {
+      visit_date: visitDate,
+    })
+    return data
+  },
 }

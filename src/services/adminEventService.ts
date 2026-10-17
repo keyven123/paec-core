@@ -42,6 +42,7 @@ export type AdminEvent = {
   meta_pixel_id?: string | null
   meta_pixel_key?: string | null
   other_info?: Record<string, unknown> | null
+  logo?: EventImage | null
   portrait_image?: EventImage | null
   featured_image?: EventImage | null
   event_showcase?: EventImage[] | null

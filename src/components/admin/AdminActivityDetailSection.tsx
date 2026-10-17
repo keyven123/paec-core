@@ -116,11 +116,27 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
+function DetailField({
+  label,
+  value,
+  preserveWhitespace = false,
+}: {
+  label: string
+  value: string
+  preserveWhitespace?: boolean
+}) {
   return (
     <div>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+      <p
+        className={
+          preserveWhitespace
+            ? 'mt-1 whitespace-pre-line text-sm font-medium text-foreground'
+            : 'mt-1 text-sm font-medium text-foreground'
+        }
+      >
+        {value}
+      </p>
     </div>
   )
 }
@@ -514,6 +530,7 @@ export function AdminActivityDetailSection({
                   <DetailField
                     label="Description"
                     value={event.event_description || 'No description provided'}
+                    preserveWhitespace
                   />
                 </div>
                 <DetailField label="Date Range" value={getDateRangeLabel(event)} />

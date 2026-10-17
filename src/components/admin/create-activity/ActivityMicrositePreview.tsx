@@ -260,7 +260,7 @@ export function ActivityMicrositePreview({ form }: ActivityMicrositePreviewProps
               <h2 className="text-base font-bold text-foreground">
                 About this event
               </h2>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+              <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-muted-foreground sm:text-sm">
                 {description}
               </p>
               {form.category && (

@@ -11,7 +11,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { TouchEvent } from 'react'
 import type { HeroSlide } from '@/data/mockAttractions'
 import type { DiscountInfo } from '@/lib/discountLabel'
+import type { FlashSaleInfo } from '@/lib/flashSale'
 
+import { FlashSaleBanner } from '@/components/home/FlashSaleBanner'
 import { useSiteContact } from '@/components/layout/useSiteContact'
 import { Button } from '@/components/ui/button'
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
@@ -107,10 +109,15 @@ function SaleSticker({
 
 type HeroSectionProps = {
   slides: Array<HeroSlide>
+  flashSales?: FlashSaleInfo[]
   loading?: boolean
 }
 
-export function HeroSection({ slides, loading = false }: HeroSectionProps) {
+export function HeroSection({
+  slides,
+  flashSales = [],
+  loading = false,
+}: HeroSectionProps) {
   const [slideIndex, setSlideIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const slide = slides.at(slideIndex) ?? slides.at(0)
@@ -264,7 +271,7 @@ export function HeroSection({ slides, loading = false }: HeroSectionProps) {
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0f0a1a] via-[#0f0a1a]/60 to-transparent" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[460px] max-w-7xl flex-col justify-center px-4 pt-14 pb-10 sm:min-h-[500px] sm:px-6 lg:min-h-[560px] lg:px-8 lg:pt-16 lg:pb-12">
+      <div className="relative mx-auto flex min-h-[460px] max-w-7xl flex-col justify-center px-4 pt-10 pb-10 sm:min-h-[500px] sm:px-6 lg:min-h-[560px] lg:px-8 lg:pt-12 lg:pb-12">
         {discountPercent ? (
           <SaleSticker
             key={`sale-${slide.id}`}
@@ -272,6 +279,10 @@ export function HeroSection({ slides, loading = false }: HeroSectionProps) {
             size="lg"
             className="absolute top-14 right-8 hidden lg:flex"
           />
+        ) : null}
+
+        {flashSales.length > 0 ? (
+          <FlashSaleBanner sales={flashSales} />
         ) : null}
 
         <div

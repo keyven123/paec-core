@@ -1,39 +1,45 @@
 import type { Attraction } from '@/data/mockAttractions'
 
+/** Empty selection — show every activity. */
 export const ALL_CATEGORIES = 'all'
 
 export type ActivityCategoryOption = {
   id: string
   label: string
+  /** Lucide icon key used by CategoryBar */
   icon: string
   count: number
 }
 
-const CATEGORY_ICONS: Array<[RegExp, string]> = [
-  [/all-day/i, '🎡'],
-  [/arcade|game zone/i, '🕹️'],
-  [/^games?$/i, '🎯'],
-  [/cultur|heritage/i, '🏛️'],
-  [/museum|educational|science/i, '🔬'],
-  [/family|fec|carnival/i, '👨‍👩‍👧'],
-  [/food|booth/i, '🍿'],
-  [/playground/i, '🛝'],
-  [/nature|eco/i, '🌿'],
-  [/outdoor|adventure/i, '🧗'],
-  [/water park/i, '🌊'],
-  [/zoo|aquarium/i, '🐠'],
-  [/sport|fitness|wellness/i, '⚽'],
-  [/concert|live|music/i, '🎤'],
-  [/\barts?\b/i, '🎨'],
-  [/workshop|training|masterclass/i, '🛠️'],
-  [/attraction/i, '🎢'],
+/** Marketplace category chips (no “All” — empty selection means all). */
+export const MARKETPLACE_CATEGORIES: Array<{
+  id: string
+  label: string
+  icon: string
+}> = [
+  { id: 'SALE', label: 'SALE', icon: 'tag' },
+  { id: 'Events', label: 'Events', icon: 'calendar' },
+  { id: 'Cultural and Heritage', label: 'Cultural and Heritage', icon: 'landmark' },
+  { id: 'Team Building', label: 'Team Building', icon: 'users' },
+  { id: 'Science', label: 'Science', icon: 'flask-conical' },
+  { id: 'Outdoor activities', label: 'Outdoor activities', icon: 'trees' },
+  { id: 'Art and craft', label: 'Art and craft', icon: 'palette' },
+  { id: 'Food', label: 'Food', icon: 'utensils' },
+  { id: 'Celebration', label: 'Celebration', icon: 'party-popper' },
+  { id: 'Annual pass', label: 'Annual pass', icon: 'ticket' },
 ]
 
-function iconFor(name: string): string {
-  return CATEGORY_ICONS.find(([pattern]) => pattern.test(name))?.[1] ?? '🎟️'
-}
+/** Admin / create-activity dropdown. */
+export const ACTIVITY_CATEGORY_OPTIONS = MARKETPLACE_CATEGORIES.map((c) => ({
+  id: c.id,
+  label: c.label,
+  icon: c.icon,
+}))
 
-/** Categories that have at least one listed activity, with "All" first. */
+/**
+ * Always show the full marketplace category list.
+ * Counts come from listed activities when names match.
+ */
 export function buildActivityCategories(
   activities: Array<Attraction>,
 ): Array<ActivityCategoryOption> {
@@ -42,17 +48,10 @@ export function buildActivityCategories(
     counts.set(activity.category, (counts.get(activity.category) ?? 0) + 1)
   }
 
-  const options = [...counts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, count]) => ({
-      id: name,
-      label: name,
-      icon: iconFor(name),
-      count,
-    }))
-
-  return [
-    { id: ALL_CATEGORIES, label: 'All', icon: '✦', count: activities.length },
-    ...options,
-  ]
+  return MARKETPLACE_CATEGORIES.map((cat) => ({
+    id: cat.id,
+    label: cat.label,
+    icon: cat.icon,
+    count: counts.get(cat.id) ?? counts.get(cat.label) ?? 0,
+  }))
 }

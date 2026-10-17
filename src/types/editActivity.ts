@@ -15,6 +15,7 @@ export type EditActivityForm = CreateActivityForm & {
   eventConfig: string
   slug: string
   status: string
+  existingLogoImage: ExistingImage | null
   existingPortraitImage: ExistingImage | null
   existingFeaturedImage: ExistingImage | null
   existingShowcaseImages: ExistingImage[]

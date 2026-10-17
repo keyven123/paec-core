@@ -22,6 +22,7 @@ export type CartItem = {
   event_slug: string | null
   event_location_uuid: string | null
   visit_date: string
+  visit_time?: string | null
   promo_code_uuid: string | null
   tickets: Array<CartItemTicket>
   /** Storefront snapshot used to display the item; the server re-prices at checkout. */
@@ -38,6 +39,7 @@ export type CartItemPayload = {
   event_uuid: string
   event_location_uuid: string | null
   visit_date: string
+  visit_time?: string | null
   promo_code_uuid: string | null
   tickets: Array<CartTicket>
   details: CheckoutSession

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export type ImagePreviewVariant = 'portrait' | 'landscape' | 'gallery'
+export type ImagePreviewVariant = 'portrait' | 'landscape' | 'gallery' | 'logo'
 
 type ImagePreviewFrameProps = {
   src: string
@@ -13,6 +13,7 @@ const variantClassName: Record<ImagePreviewVariant, string> = {
   portrait: 'mx-auto w-full max-w-[280px]',
   landscape: 'w-full',
   gallery: 'w-full',
+  logo: 'mx-auto w-full max-w-[200px]',
 }
 
 export function ImagePreviewFrame({

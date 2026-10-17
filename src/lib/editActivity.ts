@@ -46,6 +46,9 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
     slug: event.slug ?? slugify(event.event_name),
     status: event.status,
     attendeeFields,
+    existingLogoImage: event.logo
+      ? { uuid: event.logo.uuid, url: event.logo.url }
+      : null,
     existingPortraitImage: event.portrait_image
       ? { uuid: event.portrait_image.uuid, url: event.portrait_image.url }
       : null,
@@ -86,6 +89,9 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
     formData.append('event_section_uuid', form.eventSectionUuid)
   }
 
+  if (form.logoImage) {
+    formData.append('logo_image', form.logoImage)
+  }
   if (form.portraitImage) {
     formData.append('portrait_image', form.portraitImage)
   }

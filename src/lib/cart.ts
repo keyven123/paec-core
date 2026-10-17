@@ -76,6 +76,7 @@ export function cartItemSession(item: CartItem): CheckoutSession {
     eventUuid: item.event_uuid,
     eventLocationUuid: item.event_location_uuid ?? '',
     visitDate: item.visit_date,
+    visitTime: item.visit_time ?? null,
     tickets: lines,
     subtotal: 0,
     total: 0,
@@ -87,6 +88,7 @@ export function cartItemPayload(session: CheckoutSession): CartItemPayload {
     event_uuid: session.eventUuid,
     event_location_uuid: session.eventLocationUuid || null,
     visit_date: session.visitDate,
+    visit_time: session.visitTime || null,
     promo_code_uuid: session.appliedPromoCode?.uuid ?? null,
     tickets: session.tickets
       .filter((line) => line.quantity > 0)
@@ -121,12 +123,16 @@ export async function addSessionToCart(
   session: CheckoutSession,
 ): Promise<CartResponse> {
   const { items } = await cartService.get()
-  const match = items.find(
-    (item) =>
+  const sessionVisitTime = session.visitTime || null
+  const match = items.find((item) => {
+    const itemVisitTime = item.visit_time || null
+    return (
       item.event_uuid === session.eventUuid &&
       (item.event_location_uuid ?? '') === (session.eventLocationUuid || '') &&
-      item.visit_date === session.visitDate,
-  )
+      item.visit_date === session.visitDate &&
+      itemVisitTime === sessionVisitTime
+    )
+  })
 
   if (!match) return cartService.addItem(cartItemPayload(session))
 

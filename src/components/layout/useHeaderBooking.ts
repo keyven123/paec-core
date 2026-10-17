@@ -5,8 +5,9 @@ import { toast } from 'sonner'
 import type { Attraction } from '@/data/mockAttractions'
 import { useStartBooking } from '@/lib/useStartBooking'
 import {
-  isTicketAvailableForVisitDate,
+  isTicketAvailableForBooking,
   isVisitDateBookable,
+  ticketHasOperationHours,
 } from '@/lib/visitDate'
 import { blockedDateService } from '@/services/blockedDateService'
 import { marketplaceService } from '@/services/marketplaceService'
@@ -73,9 +74,9 @@ export function useHeaderBooking() {
   }, [activity])
 
   useEffect(() => {
-    if (!visitDate || !ticketTypeId) return
+    if (!ticketTypeId) return
     const ticket = ticketTypes.find((item) => item.id === ticketTypeId)
-    if (ticket && !isTicketAvailableForVisitDate(ticket, visitDate)) {
+    if (ticket && !isTicketAvailableForBooking(ticket, visitDate)) {
       setTicketTypeId('')
     }
   }, [visitDate, ticketTypeId, ticketTypes])
@@ -124,8 +125,21 @@ export function useHeaderBooking() {
       toast.error('Please select a ticket type')
       return false
     }
-    if (!isTicketAvailableForVisitDate(selectedTicket, visitDate)) {
-      toast.error('This ticket is unavailable for the selected date.')
+    if (!isTicketAvailableForBooking(selectedTicket, visitDate)) {
+      const days = selectedTicket.operationDays
+      toast.error(
+        days === 'weekdays'
+          ? `${selectedTicket.name} is available on weekdays only.`
+          : days === 'weekends'
+            ? `${selectedTicket.name} is available on weekends only.`
+            : 'This ticket is not available for purchase for the selected date.',
+      )
+      return false
+    }
+    if (ticketHasOperationHours(selectedTicket)) {
+      toast.error(
+        'This ticket requires a visit time. Please book it from the activity page.',
+      )
       return false
     }
     if (locations.length > 0 && !selectedLocation) {
@@ -154,6 +168,7 @@ export function useHeaderBooking() {
       attractionName: activity.name,
       location: selectedLocation?.label ?? activity.location,
       image: activity.image,
+      logoUrl: activity.logoUrl ?? null,
       tickets: [
         {
           ticketTypeId: selectedTicket.id,

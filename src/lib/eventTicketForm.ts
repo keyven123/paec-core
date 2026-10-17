@@ -16,13 +16,18 @@ export type EventTicketFormState = {
   price: string
   available_from: string
   available_to: string
+  feature_on_flash_sale: boolean
+  flash_sale_from: string
+  flash_sale_to: string
   display_order: number
   max_ticket: string
   schedule_uuid: string
   schedule_time_uuid: string
   status: string
-  is_virtual: boolean
-  virtual_event_url: string
+  with_operations: boolean
+  operation_days: 'any' | 'weekdays' | 'weekends'
+  operation_hours_from: string
+  operation_hours_to: string
   with_discount: boolean
   discount_type: string
   discount_value: string
@@ -42,13 +47,18 @@ export const emptyEventTicketForm = (): EventTicketFormState => ({
   price: '',
   available_from: '',
   available_to: '',
+  feature_on_flash_sale: false,
+  flash_sale_from: '',
+  flash_sale_to: '',
   display_order: 1,
   max_ticket: '',
   schedule_uuid: '',
   schedule_time_uuid: '',
   status: 'active',
-  is_virtual: false,
-  virtual_event_url: '',
+  with_operations: false,
+  operation_days: 'any',
+  operation_hours_from: '',
+  operation_hours_to: '',
   with_discount: false,
   discount_type: '',
   discount_value: '',
@@ -95,13 +105,24 @@ export function ticketToForm(
     price: ticket.price,
     available_from: formatDateTimeForInput(ticket.available_from),
     available_to: formatDateTimeForInput(ticket.available_to),
+    feature_on_flash_sale: !!ticket.feature_on_flash_sale,
+    flash_sale_from: formatDateTimeForInput(ticket.flash_sale_from),
+    flash_sale_to: formatDateTimeForInput(ticket.flash_sale_to),
     display_order: ticket.display_order,
     max_ticket: String(ticket.max_ticket),
     schedule_uuid: ticket.schedule_uuid ?? '',
     schedule_time_uuid: ticket.schedule_time_uuid ?? '',
     status: ticket.status,
-    is_virtual: ticket.is_virtual,
-    virtual_event_url: ticket.virtual_event_url ?? '',
+    with_operations:
+      (!!ticket.operation_days && ticket.operation_days !== 'any') ||
+      !!ticket.operation_hours_from ||
+      !!ticket.operation_hours_to,
+    operation_days:
+      ticket.operation_days === 'weekdays' || ticket.operation_days === 'weekends'
+        ? ticket.operation_days
+        : 'any',
+    operation_hours_from: (ticket.operation_hours_from ?? '').slice(0, 5),
+    operation_hours_to: (ticket.operation_hours_to ?? '').slice(0, 5),
     with_discount: hasDiscount,
     discount_type: ticket.discount_type ?? '',
     discount_value: ticket.discount_value ?? '',
@@ -160,8 +181,15 @@ export function validateEventTicketForm(
     errors.price = 'Valid price is required'
   }
 
-  if (form.is_virtual && !form.virtual_event_url.trim()) {
-    errors.virtual_event_url = 'Virtual activity link is required'
+  if (form.with_operations) {
+    if (
+      form.operation_hours_from &&
+      form.operation_hours_to &&
+      form.operation_hours_to < form.operation_hours_from
+    ) {
+      errors.operation_hours_to =
+        'Operation hours end must be after or equal to start'
+    }
   }
 
   if (!form.display_order || form.display_order < 1) {
@@ -216,6 +244,30 @@ export function validateEventTicketForm(
     errors.coupons = 'At least one coupon name is required'
   }
 
+  if (form.feature_on_flash_sale) {
+    if (!form.flash_sale_from) {
+      errors.flash_sale_from = 'Flash sale from is required'
+    }
+    if (!form.flash_sale_to) {
+      errors.flash_sale_to = 'Flash sale to is required'
+    } else if (
+      form.flash_sale_from &&
+      form.flash_sale_to < form.flash_sale_from
+    ) {
+      errors.flash_sale_to =
+        'Flash sale to must be after or equal to flash sale from'
+    }
+  }
+
+  if (
+    form.available_from &&
+    form.available_to &&
+    form.available_to < form.available_from
+  ) {
+    errors.available_to =
+      'Visit available to must be after or equal to visit available from'
+  }
+
   return errors
 }
 
@@ -237,14 +289,30 @@ export function buildCreateTicketPayload(
     price: form.price,
     available_from: formatDateTimeForBackend(form.available_from),
     available_to: formatDateTimeForBackend(form.available_to),
+    feature_on_flash_sale: form.feature_on_flash_sale,
+    flash_sale_from: form.feature_on_flash_sale
+      ? formatDateTimeForBackend(form.flash_sale_from)
+      : null,
+    flash_sale_to: form.feature_on_flash_sale
+      ? formatDateTimeForBackend(form.flash_sale_to)
+      : null,
     display_order: form.display_order,
     max_ticket: form.is_unlimited
       ? 999999999
       : form.max_ticket
         ? Number.parseInt(form.max_ticket, 10)
         : undefined,
-    is_virtual: form.is_virtual,
-    virtual_event_url: form.virtual_event_url.trim() || null,
+    is_virtual: false,
+    virtual_event_url: null,
+    operation_days: form.with_operations ? form.operation_days : 'any',
+    operation_hours_from:
+      form.with_operations && form.operation_hours_from
+        ? form.operation_hours_from
+        : null,
+    operation_hours_to:
+      form.with_operations && form.operation_hours_to
+        ? form.operation_hours_to
+        : null,
     discount_type: form.with_discount ? form.discount_type : null,
     discount_value: form.with_discount ? form.discount_value : null,
     is_unlimited: form.is_unlimited,
@@ -278,13 +346,29 @@ export function buildUpdateTicketPayload(
     price: form.price,
     available_from: formatDateTimeForBackend(form.available_from),
     available_to: formatDateTimeForBackend(form.available_to),
+    feature_on_flash_sale: form.feature_on_flash_sale,
+    flash_sale_from: form.feature_on_flash_sale
+      ? formatDateTimeForBackend(form.flash_sale_from)
+      : null,
+    flash_sale_to: form.feature_on_flash_sale
+      ? formatDateTimeForBackend(form.flash_sale_to)
+      : null,
     display_order: form.display_order,
     max_ticket: form.is_unlimited
       ? 999999999
       : Number.parseInt(form.max_ticket, 10),
     status: form.status,
-    is_virtual: form.is_virtual,
-    virtual_event_url: form.virtual_event_url.trim() || null,
+    is_virtual: false,
+    virtual_event_url: null,
+    operation_days: form.with_operations ? form.operation_days : 'any',
+    operation_hours_from:
+      form.with_operations && form.operation_hours_from
+        ? form.operation_hours_from
+        : null,
+    operation_hours_to:
+      form.with_operations && form.operation_hours_to
+        ? form.operation_hours_to
+        : null,
     discount_type: form.with_discount ? form.discount_type : null,
     discount_value: form.with_discount ? form.discount_value : null,
     is_unlimited: form.is_unlimited,
