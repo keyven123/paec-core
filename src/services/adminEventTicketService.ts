@@ -21,6 +21,9 @@ export type AdminEventTicket = {
   bundle_quantity: number | null
   available_from: string | null
   available_to: string | null
+  feature_on_flash_sale?: boolean
+  flash_sale_from?: string | null
+  flash_sale_to?: string | null
   display_order: number
   max_ticket: number
   sold_ticket: number
@@ -30,6 +33,9 @@ export type AdminEventTicket = {
   is_unlimited: boolean
   visit_policy: string | null
   validity_days: number | null
+  operation_days?: 'any' | 'weekdays' | 'weekends' | string | null
+  operation_hours_from?: string | null
+  operation_hours_to?: string | null
   ticket_limit_per_user: number | null
   with_coupon?: boolean
   coupons?: EventTicketCoupon[]
@@ -85,5 +91,41 @@ export const adminEventTicketService = {
       { uuid: ticketUuid },
     )
     return data.data
+  },
+
+  async sendSponsorTickets(payload: {
+    event_uuid: string
+    event_ticket_uuid: string
+    email: string
+    quantity: number
+    valid_until?: string
+  }): Promise<{
+    message: string
+    data: {
+      transaction_uuid: string
+      order_number: string
+      quantity: number
+      recipient: {
+        email: string
+        uuid: string
+        is_new_account: boolean
+      }
+    }
+  }> {
+    const { data } = await adminApi.post<{
+      success: boolean
+      message: string
+      data: {
+        transaction_uuid: string
+        order_number: string
+        quantity: number
+        recipient: {
+          email: string
+          uuid: string
+          is_new_account: boolean
+        }
+      }
+    }>('/v1/tickets/send-sponsor', payload)
+    return { message: data.message, data: data.data }
   },
 }

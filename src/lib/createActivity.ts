@@ -39,6 +39,9 @@ export function buildCreateActivityFormData(
     formData.append('status', 'draft')
   }
 
+  if (form.logoImage) {
+    formData.append('logo_image', form.logoImage)
+  }
   if (form.portraitImage) {
     formData.append('portrait_image', form.portraitImage)
   }

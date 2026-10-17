@@ -38,6 +38,7 @@ export type PublicEvent = {
   max_discount_percent?: number | null
   max_discount_amount?: number | null
   discount_type?: 'percentage' | 'amount' | null
+  logo?: PublicEventImage | null
   portrait_image?: PublicEventImage | null
   featured_image?: PublicEventImage | null
   event_showcase?: Array<PublicEventImage> | null
@@ -68,6 +69,12 @@ export type PublicEventTicket = {
   description?: string
   available_from?: string | null
   available_to?: string | null
+  feature_on_flash_sale?: boolean
+  flash_sale_from?: string | null
+  flash_sale_to?: string | null
+  operation_days?: string | null
+  operation_hours_from?: string | null
+  operation_hours_to?: string | null
 }
 
 export type BrowseByCityLocation = {
@@ -224,6 +231,7 @@ export function mapPublicEventToAttraction(
         : undefined,
     promo: discountPercent > 0,
     image: heroImage,
+    logoUrl: resolveImageUrl(event.logo?.url) || null,
     showcaseImages: mapShowcaseImages(event, heroImage),
     featured: event.event_section_name === 'featured',
     hours: formatScheduleLabel(event),
@@ -248,6 +256,20 @@ export function mapPublicEventToAttraction(
         description: ticket.description,
         availableFrom: ticket.available_from ?? null,
         availableTo: ticket.available_to ?? null,
+        featureOnFlashSale: !!ticket.feature_on_flash_sale,
+        flashSaleFrom: ticket.flash_sale_from ?? null,
+        flashSaleTo: ticket.flash_sale_to ?? null,
+        operationDays:
+          ticket.operation_days === 'weekdays' ||
+          ticket.operation_days === 'weekends'
+            ? ticket.operation_days
+            : 'any',
+        operationHoursFrom: ticket.operation_hours_from
+          ? String(ticket.operation_hours_from).slice(0, 5)
+          : null,
+        operationHoursTo: ticket.operation_hours_to
+          ? String(ticket.operation_hours_to).slice(0, 5)
+          : null,
       }
     }),
     todayCutoffTime: event.today_cutoff_time ?? null,
@@ -414,6 +436,18 @@ export const marketplaceService = {
       return null
     }
   },
+
+  async getEventTickets(eventUuid: string): Promise<Array<PublicEventTicket>> {
+    try {
+      const { data } = await api.get<{ data: Array<PublicEventTicket> }>(
+        `/v1/public/events/${eventUuid}/tickets`,
+      )
+      return data.data ?? []
+    } catch {
+      return []
+    }
+  },
+
 
   async getActivityPaymentGateways(
     identifier: string,

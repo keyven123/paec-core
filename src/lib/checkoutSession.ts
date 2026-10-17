@@ -15,8 +15,12 @@ export type CheckoutSession = {
   attractionName: string
   location: string
   image: string
+  /** Activity logo for downloaded e-tickets; PAEC mark used when absent. */
+  logoUrl?: string | null
   tickets: Array<CheckoutTicketLine>
   visitDate: string
+  /** HH:mm when ticket Operations hours require a visit time. */
+  visitTime?: string | null
   subtotal: number
   promoDiscount: number
   total: number

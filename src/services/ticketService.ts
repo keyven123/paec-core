@@ -42,6 +42,7 @@ export type TicketEvent = {
   organizer_name?: string | null
   description: string
   address?: string
+  logo?: { path: string; url: string }
   portrait?: { path: string; url: string }
   featured?: { path: string; url: string }
 }

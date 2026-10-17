@@ -15,8 +15,11 @@ import { useStartBooking } from '@/lib/useStartBooking'
 import { useStoredUser } from '@/lib/useStoredUser'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
 import {
-  isTicketAvailableForVisitDate,
+  buildOperationTimeSlots,
+  isTicketAvailableForBooking,
+  isTicketCurrentlyOnSale,
   isVisitDateBookable,
+  ticketHasOperationHours,
 } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import { blockedDateService } from '@/services/blockedDateService'
@@ -45,6 +48,7 @@ export function BookingSidebar({
     attraction.locations[0]?.uuid ?? '',
   )
   const [visitDate, setVisitDate] = useState('')
+  const [visitTime, setVisitTime] = useState('')
   const [blockedDates, setBlockedDates] = useState<Array<string>>([])
   const [appliedPromoCode, setAppliedPromoCode] =
     useState<PublicPromoCode | null>(null)
@@ -58,6 +62,7 @@ export function BookingSidebar({
     setLocationUuid(defaultLocation?.uuid ?? '')
     setAppliedPromoCode(null)
     setVisitDate('')
+    setVisitTime('')
     setQuantities({})
   }, [attraction.eventUuid, attraction.locations])
 
@@ -95,15 +100,13 @@ export function BookingSidebar({
   }, [attraction.eventUuid])
 
   useEffect(() => {
-    if (!visitDate) return
-
     setQuantities((prev) => {
       let changed = false
       const next = { ...prev }
       for (const ticket of attraction.ticketTypes) {
         if (
           (next[ticket.id] ?? 0) > 0 &&
-          !isTicketAvailableForVisitDate(ticket, visitDate)
+          !isTicketAvailableForBooking(ticket, visitDate)
         ) {
           next[ticket.id] = 0
           changed = true
@@ -113,11 +116,29 @@ export function BookingSidebar({
     })
   }, [visitDate, attraction.ticketTypes])
 
+  const selectedTickets = attraction.ticketTypes.filter(
+    (ticket) => (quantities[ticket.id] ?? 0) > 0,
+  )
+  const needsVisitTime = selectedTickets.some((ticket) =>
+    ticketHasOperationHours(ticket),
+  )
+  const ticketTimeSlots = useMemo(() => {
+    const slots: Record<string, Array<string>> = {}
+    for (const ticket of attraction.ticketTypes) {
+      if (!ticketHasOperationHours(ticket)) continue
+      slots[ticket.id] = buildOperationTimeSlots(
+        ticket.operationHoursFrom?.slice(0, 5) ?? '00:00',
+        ticket.operationHoursTo?.slice(0, 5) ?? '23:30',
+      )
+    }
+    return slots
+  }, [attraction.ticketTypes])
+
   const ticketLines: Array<CheckoutTicketLine> = attraction.ticketTypes
     .filter(
       (ticket) =>
         (quantities[ticket.id] ?? 0) > 0 &&
-        isTicketAvailableForVisitDate(ticket, visitDate),
+        isTicketAvailableForBooking(ticket, visitDate),
     )
     .map((ticket) => ({
       ticketTypeId: ticket.id,
@@ -169,6 +190,39 @@ export function BookingSidebar({
       )
       return
     }
+    for (const ticket of selectedTickets) {
+      if (!isTicketAvailableForBooking(ticket, visitDate)) {
+        const days = ticket.operationDays
+        toast.error(
+          days === 'weekdays'
+            ? `${ticket.name} is available on weekdays only.`
+            : days === 'weekends'
+              ? `${ticket.name} is available on weekends only.`
+              : `${ticket.name} is unavailable for the selected date.`,
+        )
+        return
+      }
+    }
+    if (needsVisitTime) {
+      if (!visitTime) {
+        toast.error('Please select a visit time')
+        return
+      }
+      for (const ticket of selectedTickets) {
+        if (!ticketHasOperationHours(ticket)) continue
+        const slots = ticketTimeSlots[ticket.id] ?? []
+        if (slots.length === 0) {
+          toast.error(
+            `No visit times are available for ${ticket.name}. Check operation hours.`,
+          )
+          return
+        }
+        if (!slots.includes(visitTime)) {
+          toast.error(`Please select a valid visit time for ${ticket.name}`)
+          return
+        }
+      }
+    }
 
     void startBooking({
       attractionId: attraction.id,
@@ -177,8 +231,10 @@ export function BookingSidebar({
       attractionName: attraction.name,
       location: selectedLocation?.label ?? attraction.location,
       image: attraction.image,
+      logoUrl: attraction.logoUrl ?? null,
       tickets: ticketLines,
       visitDate,
+      visitTime: needsVisitTime ? visitTime : null,
       subtotal,
       promoDiscount,
       total,
@@ -220,7 +276,10 @@ export function BookingSidebar({
 
         <VisitDatePicker
           value={visitDate}
-          onChange={setVisitDate}
+          onChange={(value) => {
+            setVisitDate(value)
+            setVisitTime('')
+          }}
           blockedDates={blockedDates}
           todayCutoffTime={attraction.todayCutoffTime}
           onRejectedDate={(reason) => {
@@ -251,9 +310,11 @@ export function BookingSidebar({
           ) : (
             <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-0.5">
               {attraction.ticketTypes.map((ticket) => {
-                const unavailable =
-                  Boolean(visitDate) &&
-                  !isTicketAvailableForVisitDate(ticket, visitDate)
+                const unavailable = !isTicketAvailableForBooking(
+                  ticket,
+                  visitDate,
+                )
+                const slots = ticketTimeSlots[ticket.id]
 
                 return (
                   <TicketTypeCard
@@ -261,8 +322,17 @@ export function BookingSidebar({
                     ticket={ticket}
                     quantity={quantities[ticket.id] ?? 0}
                     unavailable={unavailable}
+                    visitTime={slots ? visitTime : undefined}
+                    visitTimeSlots={slots}
+                    onVisitTimeChange={slots ? setVisitTime : undefined}
                     onDecrease={() => changeQuantity(ticket.id, -1)}
                     onIncrease={() => {
+                      if (!isTicketCurrentlyOnSale(ticket)) {
+                        toast.error(
+                          'This ticket is not available for purchase at this time.',
+                        )
+                        return
+                      }
                       if (!visitDate) {
                         toast.error('Please select a date of visit first')
                         return

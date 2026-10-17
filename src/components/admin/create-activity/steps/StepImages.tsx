@@ -21,7 +21,17 @@ export function StepImages({ form, onChange }: StepImagesProps) {
         Preview to view the full image before saving.
       </p>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        <ActivityImageField
+          label="Activity Logo"
+          hint="Recommended: square PNG (e.g. 512 × 512px). Shown on purchase and sponsor e-tickets instead of the PAEC logo."
+          file={form.logoImage}
+          existingUrl={editForm.existingLogoImage?.url}
+          onFileChange={(file) => onChange({ logoImage: file })}
+          variant="logo"
+          maxSize="Max 5MB"
+        />
+
         <ActivityImageField
           label="Portrait Image"
           hint="Recommended: 4:5 ratio (e.g. 1080 × 1350px). Shown on mobile cards, rails and the hero poster."

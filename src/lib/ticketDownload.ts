@@ -26,6 +26,8 @@ const PDF_PAGE_HEIGHT = 297
 const PDF_MARGIN = 12
 const PDF_GAP = 6
 
+const DEFAULT_TICKET_LOGO = '/Paec-Logo.png'
+
 export type TicketImageData = {
   activityName: string
   ticketTypeName: string
@@ -35,6 +37,8 @@ export type TicketImageData = {
   location: string
   orderNumber: string
   holder: string
+  /** Activity logo URL; falls back to PAEC brand mark when missing. */
+  logoUrl?: string | null
 }
 
 export type TicketImageSource = {
@@ -52,6 +56,7 @@ export type GroupPassData = {
   location: string
   orderNumber: string
   holder: string
+  logoUrl?: string | null
 }
 
 export type GroupPassSource = {
@@ -72,13 +77,73 @@ type PassContent = {
   pillTone: 'orange' | 'violet'
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+function loadImage(src: string, crossOrigin = false): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
+    if (crossOrigin) {
+      // Required so canvas export is not tainted by remote activity logos.
+      image.crossOrigin = 'anonymous'
+    }
     image.onload = () => resolve(image)
     image.onerror = () => reject(new Error(`Failed to load image: ${src}`))
     image.src = src
   })
+}
+
+/**
+ * Prefer same-origin `/storage/...` so Vite's proxy (or same-host deploy)
+ * keeps the canvas untainted without needing CORS on the API.
+ */
+function toCanvasSafeImageUrl(url: string): string {
+  try {
+    const parsed = new URL(url, window.location.origin)
+    if (parsed.pathname.startsWith('/storage/')) {
+      return `${parsed.pathname}${parsed.search}`
+    }
+  } catch {
+    // keep original
+  }
+  return url
+}
+
+async function loadTicketLogo(logoUrl?: string | null): Promise<HTMLImageElement | null> {
+  const candidates = [logoUrl?.trim(), DEFAULT_TICKET_LOGO].filter(
+    (value): value is string => !!value,
+  )
+
+  for (const raw of candidates) {
+    const src = toCanvasSafeImageUrl(raw)
+    const isRemote = /^https?:\/\//i.test(src)
+    const isApiProxy = src.startsWith('/api/')
+
+    // Prefer fetch→blob so Spaces/CDN URLs and /api logo streams stay untainted.
+    if (isRemote || isApiProxy) {
+      try {
+        const response = await fetch(src, { mode: 'cors', credentials: 'omit' })
+        if (response.ok) {
+          const blob = await response.blob()
+          if (blob.size > 0 && blob.type.startsWith('image/')) {
+            const objectUrl = URL.createObjectURL(blob)
+            try {
+              return await loadImage(objectUrl, false)
+            } finally {
+              URL.revokeObjectURL(objectUrl)
+            }
+          }
+        }
+      } catch {
+        // fall through to <img> load
+      }
+    }
+
+    try {
+      return await loadImage(src, isRemote)
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return null
 }
 
 function svgToImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
@@ -344,7 +409,10 @@ function groupPass(pass: GroupPassData): PassContent {
   }
 }
 
-async function loadAssets(svgs: Array<SVGSVGElement | null>) {
+async function loadAssets(
+  svgs: Array<SVGSVGElement | null>,
+  logoUrl?: string | null,
+) {
   // A web font that never settles would otherwise block the download forever.
   await Promise.race([
     document.fonts.ready,
@@ -352,7 +420,7 @@ async function loadAssets(svgs: Array<SVGSVGElement | null>) {
   ])
 
   const [logo, ...qrImages] = await Promise.all([
-    loadImage('/Paec-Logo.png').catch(() => null),
+    loadTicketLogo(logoUrl),
     ...svgs.map((svg) => (svg ? svgToImage(svg).catch(() => null) : null)),
   ])
   return { logo, qrImages }
@@ -397,6 +465,11 @@ export async function downloadTicketsPdf(
 ): Promise<void> {
   if (sources.length === 0) return
 
+  const logoUrl =
+    sources.find((source) => source.ticket.logoUrl)?.ticket.logoUrl ??
+    group?.pass.logoUrl ??
+    null
+
   await savePassesPdf(
     [
       ...(group
@@ -408,6 +481,7 @@ export async function downloadTicketsPdf(
       })),
     ],
     name,
+    logoUrl,
   )
 }
 
@@ -418,16 +492,21 @@ export async function downloadGroupPassPdf(
   await savePassesPdf(
     [{ content: groupPass(source.pass), qrSvg: source.qrSvg }],
     name,
+    source.pass.logoUrl,
   )
 }
 
 async function savePassesPdf(
   passes: Array<{ content: PassContent; qrSvg: SVGSVGElement | null }>,
   name: string,
+  logoUrl?: string | null,
 ): Promise<void> {
   const [{ jsPDF }, { logo, qrImages }] = await Promise.all([
     import('jspdf'),
-    loadAssets(passes.map((pass) => pass.qrSvg)),
+    loadAssets(
+      passes.map((pass) => pass.qrSvg),
+      logoUrl,
+    ),
   ])
 
   const bleed = 2

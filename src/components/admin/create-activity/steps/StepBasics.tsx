@@ -1,8 +1,7 @@
 import { fieldClassName, labelClassName, sectionClassName } from '../formStyles'
 import type { CreateActivityForm } from '@/types/createActivity'
 import type { EditActivityForm } from '@/types/editActivity'
-import { categories } from '@/data/mockAttractions'
-
+import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activityCategories'
 
 type StepBasicsProps = {
   form: CreateActivityForm | EditActivityForm
@@ -11,7 +10,7 @@ type StepBasicsProps = {
   useCategoryUuid?: boolean
 }
 
-const activityCategories = categories.filter((c) => c.id !== 'all')
+const activityCategories = ACTIVITY_CATEGORY_OPTIONS
 
 export function StepBasics({
   form,
@@ -48,9 +47,9 @@ export function StepBasics({
             <textarea
               value={form.description}
               onChange={(e) => onChange({ description: e.target.value })}
-              placeholder="Describe the fun activity"
-              rows={4}
-              className={`${fieldClassName} mt-1.5 resize-none`}
+              placeholder="Describe the fun activity. Use blank lines between paragraphs — they show the same way on the storefront."
+              rows={10}
+              className={`${fieldClassName} mt-1.5 resize-y whitespace-pre-wrap`}
             />
           </div>
 

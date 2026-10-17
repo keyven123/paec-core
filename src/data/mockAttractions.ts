@@ -10,6 +10,16 @@ export type TicketType = {
   availableFrom?: string | null
   /** Visit-date window end (Y-m-d or datetime); inclusive. */
   availableTo?: string | null
+  /** Featured on homepage / flash-sales when flash sale window is set. */
+  featureOnFlashSale?: boolean
+  /** Purchase / countdown window start (flash sale tickets only). */
+  flashSaleFrom?: string | null
+  /** Purchase / countdown window end (flash sale tickets only). */
+  flashSaleTo?: string | null
+  /** any | weekdays | weekends */
+  operationDays?: 'any' | 'weekdays' | 'weekends'
+  operationHoursFrom?: string | null
+  operationHoursTo?: string | null
 }
 
 export type AttractionLocation = {
@@ -35,6 +45,8 @@ export type Attraction = {
   discountType?: 'percentage' | 'amount'
   discountAmount?: number
   image: string
+  /** Activity logo used on downloaded / emailed e-tickets. */
+  logoUrl?: string | null
   showcaseImages?: string[]
   promo?: boolean
   featured?: boolean
@@ -75,15 +87,16 @@ export type HeroSlide = {
 }
 
 export const categories = [
-  { id: 'all', label: 'All', icon: '✦' },
-  { id: 'all-day', label: 'All-Day Activities', icon: '🎡' },
-  { id: 'arcade', label: 'Arcade / Game Zone', icon: '🕹️' },
-  { id: 'attractions', label: 'Attractions', icon: '🎢' },
-  { id: 'cultural', label: 'Cultural & Heritage', icon: '🏛️' },
-  { id: 'family', label: 'Family Entertainment', icon: '👨‍👩‍👧' },
-  { id: 'food', label: 'Food & Booths', icon: '🍿' },
-  { id: 'games', label: 'Games', icon: '🎯' },
-  { id: 'indoor', label: 'Indoor Playground', icon: '🛝' },
+  { id: 'sale', label: 'SALE', icon: 'tag' },
+  { id: 'events', label: 'Events', icon: 'calendar' },
+  { id: 'cultural', label: 'Cultural and Heritage', icon: 'landmark' },
+  { id: 'team-building', label: 'Team Building', icon: 'users' },
+  { id: 'science', label: 'Science', icon: 'flask-conical' },
+  { id: 'outdoor', label: 'Outdoor activities', icon: 'trees' },
+  { id: 'art-craft', label: 'Art and craft', icon: 'palette' },
+  { id: 'food', label: 'Food', icon: 'utensils' },
+  { id: 'celebration', label: 'Celebration', icon: 'party-popper' },
+  { id: 'annual-pass', label: 'Annual pass', icon: 'ticket' },
 ]
 
 export const heroSlides: HeroSlide[] = [
@@ -177,8 +190,8 @@ export const attractions: Attraction[] = [
     name: 'Neon Arcade Zone',
     location: 'Eastwood Mall, Quezon City',
     locations: singleLocation('mock-loc-1', 'Eastwood Mall, Quezon City'),
-    category: 'Arcade / Game Zone',
-    categoryLabel: 'ARCADE / GAME ZONE',
+    category: 'Events',
+    categoryLabel: 'EVENTS',
     price: 499,
     originalPrice: 699,
     image:
@@ -202,8 +215,8 @@ export const attractions: Attraction[] = [
     name: 'Boogie Bounce Adventure Park',
     location: 'SM Mall of Asia, Pasay City',
     locations: singleLocation('mock-loc-2', 'SM Mall of Asia, Pasay City'),
-    category: 'Indoor Playground',
-    categoryLabel: 'INDOOR PLAYGROUND / FAMILY',
+    category: 'Outdoor activities',
+    categoryLabel: 'OUTDOOR ACTIVITIES',
     price: 699,
     image:
       'https://images.unsplash.com/photo-1511882150382-421056c89033?auto=format&fit=crop&w=1200&q=80',
@@ -226,8 +239,8 @@ export const attractions: Attraction[] = [
     name: 'Heritage Walk Manila',
     location: 'Intramuros, Manila',
     locations: singleLocation('mock-loc-3', 'Intramuros, Manila'),
-    category: 'Cultural & Heritage',
-    categoryLabel: 'CULTURAL / HERITAGE TOUR',
+    category: 'Cultural and Heritage',
+    categoryLabel: 'CULTURAL AND HERITAGE',
     price: 350,
     image:
       'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
@@ -256,8 +269,8 @@ export const attractions: Attraction[] = [
     name: 'Sky Fun Carnival',
     location: 'BGC, Taguig',
     locations: singleLocation('mock-loc-4', 'BGC, Taguig'),
-    category: 'Family Entertainment',
-    categoryLabel: 'CARNIVAL / FAMILY ENTERTAINMENT',
+    category: 'Celebration',
+    categoryLabel: 'CELEBRATION',
     price: 599,
     originalPrice: 799,
     image:
@@ -281,8 +294,8 @@ export const attractions: Attraction[] = [
     name: 'Pixel Quest VR',
     location: 'Ayala Malls Manila Bay',
     locations: singleLocation('mock-loc-5', 'Ayala Malls Manila Bay'),
-    category: 'Games',
-    categoryLabel: 'VR / GAMING EXPERIENCE',
+    category: 'Events',
+    categoryLabel: 'EVENTS',
     price: 850,
     image:
       'https://images.unsplash.com/photo-1612287230202-1ff1d85c1bdf?auto=format&fit=crop&w=1200&q=80',
@@ -304,8 +317,8 @@ export const attractions: Attraction[] = [
     name: 'Taste Street Festival',
     location: 'MOA Complex, Pasay',
     locations: singleLocation('mock-loc-6', 'MOA Complex, Pasay'),
-    category: 'Food & Booths',
-    categoryLabel: 'FOOD FESTIVAL / MARKET',
+    category: 'Food',
+    categoryLabel: 'FOOD',
     price: 299,
     image:
       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80',
@@ -334,8 +347,8 @@ export const attractions: Attraction[] = [
     name: 'MindSpark Science Museum',
     location: 'SM Mall of Asia, Pasay City',
     locations: singleLocation('mock-loc-7', 'SM Mall of Asia, Pasay City'),
-    category: 'Attractions',
-    categoryLabel: 'MUSEUM / EDUCATIONAL ATTRACTION',
+    category: 'Science',
+    categoryLabel: 'SCIENCE',
     price: 799,
     image:
       'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',

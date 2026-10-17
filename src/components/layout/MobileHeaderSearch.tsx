@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import { ThemedSelect } from '@/components/ui/themed-select'
 import { VisitDatePicker } from '@/components/ui/visit-date-picker'
-import { isTicketAvailableForVisitDate } from '@/lib/visitDate'
+import { isTicketAvailableForBooking } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 
 type MobileHeaderSearchProps = {
@@ -232,9 +232,10 @@ export function MobileHeaderSearch({ className }: MobileHeaderSearchProps) {
                         value={ticketTypeId}
                         onChange={setTicketTypeId}
                         options={ticketTypes.map((ticket) => {
-                          const unavailable =
-                            Boolean(visitDate) &&
-                            !isTicketAvailableForVisitDate(ticket, visitDate)
+                          const unavailable = !isTicketAvailableForBooking(
+                            ticket,
+                            visitDate,
+                          )
 
                           return {
                             value: ticket.id,

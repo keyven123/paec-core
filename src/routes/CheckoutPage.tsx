@@ -426,6 +426,7 @@ export function CheckoutPage() {
           event_ticket_uuid: line.ticketTypeId,
           quantity: line.quantity,
           valid_until: session.visitDate,
+          visit_time: session.visitTime || undefined,
           seats: [],
         })),
         promo_code_uuid: session.appliedPromoCode?.uuid,

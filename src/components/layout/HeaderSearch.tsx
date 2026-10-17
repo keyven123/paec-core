@@ -18,7 +18,7 @@ import {
 } from '@/components/layout/useHeaderBooking'
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import { VisitDatePicker } from '@/components/ui/visit-date-picker'
-import { isTicketAvailableForVisitDate } from '@/lib/visitDate'
+import { isTicketAvailableForBooking } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 
 function useClickOutside(onOutside: () => void) {
@@ -325,9 +325,7 @@ export function HeaderSearch() {
               : 'Ticket type'
         }
         options={ticketTypes.map((ticket) => {
-          const unavailable =
-            Boolean(visitDate) &&
-            !isTicketAvailableForVisitDate(ticket, visitDate)
+          const unavailable = !isTicketAvailableForBooking(ticket, visitDate)
 
           return {
             value: ticket.id,

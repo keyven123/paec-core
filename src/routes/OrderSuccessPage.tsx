@@ -104,6 +104,11 @@ export function OrderSuccessPage() {
     ([name, quantity]) => ({ name, quantity }),
   )
 
+  // Same-origin API path (Vite proxies /api) so canvas export is not blocked by Spaces CORS.
+  const ticketLogoUrl = order.eventUuid
+    ? `/api/v1/public/events/${order.eventUuid}/logo`
+    : (order.logoUrl ?? null)
+
   const toImageSource = (ticket: ConfirmedTicket): TicketImageSource => ({
     ticket: {
       activityName: order.attractionName,
@@ -114,6 +119,7 @@ export function OrderSuccessPage() {
       location: order.location,
       orderNumber,
       holder,
+      logoUrl: ticketLogoUrl,
     },
     qrSvg: qrRefs.current.get(ticket.uuid)?.querySelector('svg') ?? null,
   })
@@ -130,6 +136,7 @@ export function OrderSuccessPage() {
       location: order.location,
       orderNumber,
       holder,
+      logoUrl: ticketLogoUrl,
     },
     qrSvg: groupQrRef.current?.querySelector('svg') ?? null,
   })

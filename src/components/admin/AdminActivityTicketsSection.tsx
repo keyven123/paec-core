@@ -3,7 +3,9 @@ import {
   ChevronLeft,
   Copy,
   Edit,
+  Flame,
   Plus,
+  Send,
   Trash2,
   X,
 } from 'lucide-react'
@@ -11,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { AdminActivityTicketFormFields } from '@/components/admin/AdminActivityTicketFormFields'
+import { SendSponsorTicketsModal } from '@/components/admin/SendSponsorTicketsModal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import {
   getApiErrorMessage,
@@ -105,6 +108,9 @@ export function AdminActivityTicketsSection({
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  const [sponsorTicket, setSponsorTicket] = useState<AdminEventTicket | null>(
+    null,
+  )
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -263,6 +269,7 @@ export function AdminActivityTicketsSection({
                 onEdit={() => openEdit(ticket)}
                 onDelete={() => setDeleteTarget(ticket)}
                 onDuplicate={() => void handleDuplicate(ticket)}
+                onSendSponsor={() => setSponsorTicket(ticket)}
               />
             ))}
           </div>
@@ -283,6 +290,14 @@ export function AdminActivityTicketsSection({
           onSubmit={() => void handleSubmit()}
         />
       ) : null}
+
+      <SendSponsorTicketsModal
+        open={sponsorTicket !== null}
+        ticket={sponsorTicket}
+        eventUuid={activityId}
+        onClose={() => setSponsorTicket(null)}
+        onSent={() => void loadData()}
+      />
 
       <ConfirmModal
         open={deleteTarget !== null}
@@ -310,12 +325,14 @@ function TicketCard({
   onEdit,
   onDelete,
   onDuplicate,
+  onSendSponsor,
 }: {
   ticket: AdminEventTicket
   duplicating: boolean
   onEdit: () => void
   onDelete: () => void
   onDuplicate: () => void
+  onSendSponsor: () => void
 }) {
   const discount = getDiscountedPrice(ticket)
 
@@ -346,6 +363,12 @@ function TicketCard({
           >
             {ticket.status}
           </span>
+          {ticket.feature_on_flash_sale ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-paec-orange ring-1 ring-orange-200">
+              <Flame className="size-3" />
+              Flash Sale
+            </span>
+          ) : null}
           {ticket.is_bundle ? (
             <span className="rounded-full bg-paec-violet/10 px-2 py-0.5 text-[11px] font-semibold text-paec-violet">
               Bundle
@@ -393,7 +416,22 @@ function TicketCard({
               : 'No',
           ],
           ['Order', String(ticket.display_order)],
-          ['Virtual', ticket.is_virtual ? 'Yes' : 'No'],
+          [
+            'Operations',
+            ticket.operation_days && ticket.operation_days !== 'any'
+              ? ticket.operation_days === 'weekdays'
+                ? 'Weekdays'
+                : 'Weekends'
+              : ticket.operation_hours_from || ticket.operation_hours_to
+                ? 'Hours set'
+                : 'Any day',
+          ],
+          [
+            'Hours',
+            ticket.operation_hours_from || ticket.operation_hours_to
+              ? `${(ticket.operation_hours_from ?? '—').toString().slice(0, 5)} – ${(ticket.operation_hours_to ?? '—').toString().slice(0, 5)}`
+              : '—',
+          ],
         ].map(([label, value]) => (
           <div key={label} className="flex justify-between gap-3">
             <dt className="text-muted-foreground">{label}</dt>
@@ -402,23 +440,33 @@ function TicketCard({
         ))}
       </dl>
 
-      <div className="mt-auto flex gap-2 border-t border-violet-50 pt-4">
+      <div className="mt-auto space-y-2 border-t border-violet-50 pt-4">
         <button
           type="button"
-          onClick={onEdit}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold hover:bg-violet-50"
+          onClick={onSendSponsor}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-paec-orange/40 bg-orange-50 px-3 py-2 text-xs font-semibold text-paec-orange hover:bg-orange-100"
         >
-          <Edit className="size-3.5" />
-          Edit
+          <Send className="size-3.5" />
+          Send Sponsor
         </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-        >
-          <Trash2 className="size-3.5" />
-          Delete
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold hover:bg-violet-50"
+          >
+            <Edit className="size-3.5" />
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+          >
+            <Trash2 className="size-3.5" />
+            Delete
+          </button>
+        </div>
       </div>
     </article>
   )
