@@ -57,8 +57,11 @@ export function AdminRescheduleTicketsPanel({
       onSaved()
     } catch (err) {
       const fieldErrors = getApiValidationErrors(err)
+      const visitDateError = fieldErrors.visit_date
       setError(
-        fieldErrors.visit_date ??
+        (Array.isArray(visitDateError)
+          ? visitDateError[0]
+          : visitDateError) ??
           getApiErrorMessage(err, 'Failed to reschedule tickets.'),
       )
     } finally {
