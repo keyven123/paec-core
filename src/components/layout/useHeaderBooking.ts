@@ -5,8 +5,10 @@ import { toast } from 'sonner'
 import type { Attraction } from '@/data/mockAttractions'
 import { useStartBooking } from '@/lib/useStartBooking'
 import {
+  allowsOperationDay,
   isTicketAvailableForBooking,
   isVisitDateBookable,
+  operationDayUnavailableMessage,
   ticketHasOperationHours,
 } from '@/lib/visitDate'
 import { blockedDateService } from '@/services/blockedDateService'
@@ -126,13 +128,19 @@ export function useHeaderBooking() {
       return false
     }
     if (!isTicketAvailableForBooking(selectedTicket, visitDate)) {
-      const days = selectedTicket.operationDays
       toast.error(
-        days === 'weekdays'
-          ? `${selectedTicket.name} is available on weekdays only.`
-          : days === 'weekends'
-            ? `${selectedTicket.name} is available on weekends only.`
-            : 'This ticket is not available for purchase for the selected date.',
+        !allowsOperationDay(
+          visitDate,
+          selectedTicket.operationDays,
+          selectedTicket.operationCustomDays,
+        )
+          ? operationDayUnavailableMessage(
+              visitDate,
+              selectedTicket.name,
+              selectedTicket.operationDays,
+              selectedTicket.operationCustomDays,
+            )
+          : 'This ticket is not available for purchase for the selected date.',
       )
       return false
     }

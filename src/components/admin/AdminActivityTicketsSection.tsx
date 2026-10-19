@@ -421,7 +421,11 @@ function TicketCard({
             ticket.operation_days && ticket.operation_days !== 'any'
               ? ticket.operation_days === 'weekdays'
                 ? 'Weekdays'
-                : 'Weekends'
+                : ticket.operation_days === 'weekends'
+                  ? 'Weekends'
+                  : ticket.operation_days === 'custom'
+                    ? `Custom (${(ticket.operation_custom_days ?? []).join(', ') || 'none'})`
+                    : ticket.operation_days
               : ticket.operation_hours_from || ticket.operation_hours_to
                 ? 'Hours set'
                 : 'Any day',

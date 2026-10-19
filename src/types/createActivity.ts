@@ -17,6 +17,9 @@ export type CreateActivityTicket = {
   validityDays: number
 }
 
+/** Daily = ongoing attraction; specific_date = one-time single event. */
+export type ActivityScheduleMode = 'daily' | 'specific_date'
+
 export type CreateActivityForm = {
   name: string
   description: string
@@ -27,6 +30,14 @@ export type CreateActivityForm = {
   categoryUuid: string
   address: string
   city: string
+  /** Defaults to daily. Specific date creates a single-event schedule. */
+  scheduleMode: ActivityScheduleMode
+  /** YYYY-MM-DD — required when scheduleMode is specific_date. */
+  eventDate: string
+  /** HH:MM — required when scheduleMode is specific_date. */
+  eventTimeStart: string
+  /** HH:MM — required when scheduleMode is specific_date. */
+  eventTimeEnd: string
   logoImage: File | null
   portraitImage: File | null
   featuredImage: File | null
@@ -59,6 +70,10 @@ export const initialCreateActivityForm: CreateActivityForm = {
   categoryUuid: '',
   city: '',
   address: '',
+  scheduleMode: 'daily',
+  eventDate: '',
+  eventTimeStart: '',
+  eventTimeEnd: '',
   logoImage: null,
   portraitImage: null,
   featuredImage: null,

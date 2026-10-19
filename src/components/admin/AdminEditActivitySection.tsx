@@ -12,6 +12,7 @@ import { StepPaymentGateway } from '@/components/admin/create-activity/steps/Ste
 import { StepPreview } from '@/components/admin/create-activity/steps/StepPreview'
 import { StepSummary } from '@/components/admin/create-activity/steps/StepSummary'
 import { getApiErrorMessage } from '@/lib/api'
+import { validateCreateActivitySchedule } from '@/lib/createActivity'
 import {
   buildEditActivityFormData,
   mapEventToEditForm,
@@ -90,6 +91,11 @@ export function AdminEditActivitySection({
         toast.error('Please fill in all required fields.')
         return false
       }
+      const scheduleError = validateCreateActivitySchedule(form)
+      if (scheduleError) {
+        toast.error(scheduleError)
+        return false
+      }
     }
     if (step === 3 && form.enableMetaPixel) {
       if (!form.metaPixelId.trim() || !form.metaPixelAccessToken.trim()) {
@@ -110,6 +116,12 @@ export function AdminEditActivitySection({
       !form.city.trim()
     ) {
       toast.error('Please fill in all required fields.')
+      setStep(1)
+      return
+    }
+    const scheduleError = validateCreateActivitySchedule(form)
+    if (scheduleError) {
+      toast.error(scheduleError)
       setStep(1)
       return
     }

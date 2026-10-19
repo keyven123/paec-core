@@ -1,6 +1,7 @@
 import type { AdminEvent } from '@/services/adminEventService'
 import type { EditActivityForm } from '@/types/editActivity'
 import { appendPaymentGatewayUuids } from '@/lib/createActivity'
+import type { ActivityScheduleMode } from '@/types/createActivity'
 import { initialCreateActivityForm } from '@/types/createActivity'
 
 function slugify(value: string) {
@@ -9,6 +10,50 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+function normalizeTimeForApi(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '00:00:00'
+  return trimmed.length === 5 ? `${trimmed}:00` : trimmed
+}
+
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.slice(0, 10)
+}
+
+function toTimeInputValue(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.slice(0, 5)
+}
+
+function scheduleFromEvent(event: AdminEvent): {
+  scheduleMode: ActivityScheduleMode
+  eventDate: string
+  eventTimeStart: string
+  eventTimeEnd: string
+} {
+  const isSingle =
+    event.event_type === 'single' || event.schedule_type === 'single'
+  const firstSchedule = event.schedules?.[0]
+  const firstTime = firstSchedule?.schedule_times?.[0]
+
+  if (!isSingle) {
+    return {
+      scheduleMode: 'daily',
+      eventDate: '',
+      eventTimeStart: '',
+      eventTimeEnd: '',
+    }
+  }
+
+  return {
+    scheduleMode: 'specific_date',
+    eventDate: toDateInputValue(firstSchedule?.date_from),
+    eventTimeStart: toTimeInputValue(firstTime?.time_start),
+    eventTimeEnd: toTimeInputValue(firstTime?.time_end),
+  }
 }
 
 export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
@@ -28,6 +73,8 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
       })
     : []
 
+  const schedule = scheduleFromEvent(event)
+
   return {
     ...initialCreateActivityForm,
     name: event.event_name,
@@ -38,6 +85,10 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
     categoryUuid: event.category_uuid ?? '',
     address: event.address ?? '',
     city: event.city ?? '',
+    scheduleMode: schedule.scheduleMode,
+    eventDate: schedule.eventDate,
+    eventTimeStart: schedule.eventTimeStart,
+    eventTimeEnd: schedule.eventTimeEnd,
     organizationName: event.organization?.name ?? '—',
     organizationUuid: event.organization_uuid ?? event.organization?.uuid ?? '',
     eventSectionUuid: event.event_section_uuid,
@@ -75,12 +126,25 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
   // Always send so clearing the field removes the number on save.
   formData.append('contact_number', form.contactNumber.trim())
   formData.append('category_uuid', form.categoryUuid)
-  formData.append('event_type', form.eventType)
+  const isSpecificDate = form.scheduleMode === 'specific_date'
+  formData.append('event_type', isSpecificDate ? 'single' : 'daily')
   formData.append('event_config', form.eventConfig)
+  formData.append('schedule_type', isSpecificDate ? 'single' : 'daily')
   formData.append('status', form.status)
   formData.append('slug', form.slug || slugify(form.name))
   formData.append('city', form.city.trim())
   if (form.address.trim()) formData.append('address', form.address.trim())
+  if (isSpecificDate) {
+    const date = form.eventDate.trim()
+    const timeStart = normalizeTimeForApi(form.eventTimeStart)
+    const timeEnd = normalizeTimeForApi(form.eventTimeEnd)
+    formData.append('schedules[0][date_from]', date)
+    formData.append('schedules[0][date_to]', date)
+    formData.append('schedules[0][status]', 'published')
+    formData.append('schedules[0][time][0][time_start]', timeStart)
+    formData.append('schedules[0][time][0][time_end]', timeEnd)
+    formData.append('schedules[0][time][0][status]', 'published')
+  }
   // Super-admin update requires this; omit only when truly unset so the API can fill a default.
   if (form.organizationUuid.trim()) {
     formData.append('organization_uuid', form.organizationUuid.trim())

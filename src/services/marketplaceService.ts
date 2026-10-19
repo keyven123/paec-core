@@ -43,9 +43,15 @@ export type PublicEvent = {
   featured_image?: PublicEventImage | null
   event_showcase?: Array<PublicEventImage> | null
   category?: { uuid: string; name: string }
+  event_type?: string
+  schedule_type?: string
   schedules?: Array<{
     date_from?: string
     date_to?: string
+    schedule_times?: Array<{
+      time_start?: string
+      time_end?: string
+    }>
   }>
   event_locations?: Array<PublicEventLocation>
   today_cutoff_time?: string | null
@@ -73,6 +79,7 @@ export type PublicEventTicket = {
   flash_sale_from?: string | null
   flash_sale_to?: string | null
   operation_days?: string | null
+  operation_custom_days?: Array<string> | null
   operation_hours_from?: string | null
   operation_hours_to?: string | null
 }
@@ -147,8 +154,52 @@ function mapShowcaseImages(
   return images.filter((url) => url !== heroImage)
 }
 
-function formatScheduleLabel(_event: PublicEvent): string {
+function toTimeLabel(value: string | null | undefined): string {
+  if (!value) return ''
+  const hhmm = value.slice(0, 5)
+  const [hoursRaw, minutes] = hhmm.split(':').map(Number)
+  if (Number.isNaN(hoursRaw) || Number.isNaN(minutes)) return hhmm
+  const period = hoursRaw >= 12 ? 'PM' : 'AM'
+  const hours = hoursRaw % 12 || 12
+  return `${hours}:${String(minutes).padStart(2, '0')} ${period}`
+}
+
+function formatScheduleLabel(event: PublicEvent): string {
+  const isSingle =
+    event.event_type === 'single' || event.schedule_type === 'single'
+  const schedule = event.schedules?.[0]
+  const date = schedule?.date_from?.slice(0, 10)
+  if (isSingle && date) {
+    const time = schedule?.schedule_times?.[0]
+    const start = toTimeLabel(time?.time_start)
+    const end = toTimeLabel(time?.time_end)
+    if (start && end) return `${date} · ${start} – ${end}`
+    return date
+  }
   return 'Open Daily'
+}
+
+function fixedVisitFromEvent(event: PublicEvent): {
+  fixedVisitDate: string | null
+  fixedVisitTimeStart: string | null
+  fixedVisitTimeEnd: string | null
+} {
+  const isSingle =
+    event.event_type === 'single' || event.schedule_type === 'single'
+  if (!isSingle) {
+    return {
+      fixedVisitDate: null,
+      fixedVisitTimeStart: null,
+      fixedVisitTimeEnd: null,
+    }
+  }
+  const schedule = event.schedules?.[0]
+  const time = schedule?.schedule_times?.[0]
+  return {
+    fixedVisitDate: schedule?.date_from?.slice(0, 10) ?? null,
+    fixedVisitTimeStart: time?.time_start?.slice(0, 5) ?? null,
+    fixedVisitTimeEnd: time?.time_end?.slice(0, 5) ?? null,
+  }
 }
 
 function formatLocationLabel(location: PublicEventLocation): string {
@@ -211,6 +262,7 @@ export function mapPublicEventToAttraction(
       ? toNumber(event.discounted_price_start)
       : null
   const hasLowerPrice = discountedPrice !== null && discountedPrice < basePrice
+  const fixedVisit = fixedVisitFromEvent(event)
 
   return {
     id: event.slug ?? event.uuid,
@@ -240,6 +292,9 @@ export function mapPublicEventToAttraction(
     reviewCount: 0,
     description: event.event_description,
     tags: categoryName ? [categoryName] : [],
+    fixedVisitDate: fixedVisit.fixedVisitDate,
+    fixedVisitTimeStart: fixedVisit.fixedVisitTimeStart,
+    fixedVisitTimeEnd: fixedVisit.fixedVisitTimeEnd,
     ticketTypes: tickets.map((ticket) => {
       const listPrice = toNumber(ticket.price)
       const finalPrice =
@@ -261,9 +316,17 @@ export function mapPublicEventToAttraction(
         flashSaleTo: ticket.flash_sale_to ?? null,
         operationDays:
           ticket.operation_days === 'weekdays' ||
-          ticket.operation_days === 'weekends'
+          ticket.operation_days === 'weekends' ||
+          ticket.operation_days === 'custom'
             ? ticket.operation_days
             : 'any',
+        operationCustomDays: Array.isArray(ticket.operation_custom_days)
+          ? (ticket.operation_custom_days.filter((day) =>
+              ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day),
+            ) as Array<
+              'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+            >)
+          : null,
         operationHoursFrom: ticket.operation_hours_from
           ? String(ticket.operation_hours_from).slice(0, 5)
           : null,

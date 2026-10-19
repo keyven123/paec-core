@@ -13,6 +13,7 @@ import { StepSummary } from '@/components/admin/create-activity/steps/StepSummar
 import { getApiErrorMessage } from '@/lib/api'
 import {
   buildCreateActivityFormData,
+  validateCreateActivitySchedule,
   validateCreateActivityTickets,
 } from '@/lib/createActivity'
 import { adminEventService } from '@/services/adminEventService'
@@ -70,6 +71,11 @@ export function AdminCreateActivityPage() {
         toast.error('Please fill in all required fields.')
         return false
       }
+      const scheduleError = validateCreateActivitySchedule(form)
+      if (scheduleError) {
+        toast.error(scheduleError)
+        return false
+      }
     }
     if (step === 3) {
       const ticketError = validateCreateActivityTickets(form)
@@ -90,6 +96,12 @@ export function AdminCreateActivityPage() {
       !form.city.trim()
     ) {
       toast.error('Please fill in all required fields.')
+      setStep(1)
+      return false
+    }
+    const scheduleError = validateCreateActivitySchedule(form)
+    if (scheduleError) {
+      toast.error(scheduleError)
       setStep(1)
       return false
     }

@@ -734,6 +734,15 @@ export function AdminActivityTicketFormFields({
                 ? {}
                 : {
                     operation_days: 'any' as const,
+                    operation_custom_days: [
+                      'mon',
+                      'tue',
+                      'wed',
+                      'thu',
+                      'fri',
+                      'sat',
+                      'sun',
+                    ] as const,
                     operation_hours_from: '',
                     operation_hours_to: '',
                   }),
@@ -743,7 +752,7 @@ export function AdminActivityTicketFormFields({
         />
         <span className="flex items-center gap-1">
           Operations
-          <InfoTip text="Limit this ticket to weekdays or weekends, and set operation hours so customers can pick a visit time." />
+          <InfoTip text="Limit this ticket to specific days of the week, and set operation hours so customers can pick a visit time." />
         </span>
       </label>
 
@@ -763,7 +772,22 @@ export function AdminActivityTicketFormFields({
                   operation_days: event.target.value as
                     | 'any'
                     | 'weekdays'
-                    | 'weekends',
+                    | 'weekends'
+                    | 'custom',
+                  ...(event.target.value === 'custom' &&
+                  formData.operation_custom_days.length === 0
+                    ? {
+                        operation_custom_days: [
+                          'mon',
+                          'tue',
+                          'wed',
+                          'thu',
+                          'fri',
+                          'sat',
+                          'sun',
+                        ],
+                      }
+                    : {}),
                 })
               }
               className={inputClassName}
@@ -771,10 +795,57 @@ export function AdminActivityTicketFormFields({
               <option value="any">Any day</option>
               <option value="weekdays">Weekdays only (Mon–Fri)</option>
               <option value="weekends">Weekends only (Sat–Sun)</option>
+              <option value="custom">Custom</option>
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
               Customers can only book a Date of Visit on these days.
             </p>
+            {formData.operation_days === 'custom' ? (
+              <div className="mt-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(
+                    [
+                      ['mon', 'Monday'],
+                      ['tue', 'Tuesday'],
+                      ['wed', 'Wednesday'],
+                      ['thu', 'Thursday'],
+                      ['fri', 'Friday'],
+                      ['sat', 'Saturday'],
+                      ['sun', 'Sunday'],
+                    ] as const
+                  ).map(([key, label]) => {
+                    const checked = formData.operation_custom_days.includes(key)
+                    return (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 rounded-lg border border-violet-100 bg-white px-2.5 py-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setFormData({
+                              ...formData,
+                              operation_custom_days: checked
+                                ? formData.operation_custom_days.filter(
+                                    (day) => day !== key,
+                                  )
+                                : [...formData.operation_custom_days, key],
+                            })
+                          }
+                          className="size-4 rounded border-violet-200 accent-paec-violet"
+                        />
+                        {label}
+                      </label>
+                    )
+                  })}
+                </div>
+                <FieldError message={fieldError('operation_custom_days')} />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Unchecked days are not available for this ticket.
+                </p>
+              </div>
+            ) : null}
           </div>
           <div>
             <FieldLabel

@@ -1,5 +1,11 @@
 import type { CreateActivityForm } from '@/types/createActivity'
 
+function normalizeTimeForApi(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '00:00:00'
+  return trimmed.length === 5 ? `${trimmed}:00` : trimmed
+}
+
 /** Sent as JSON so an empty selection still reaches the API (multipart can't carry `[]`). */
 export function appendPaymentGatewayUuids(
   formData: FormData,
@@ -24,13 +30,28 @@ export function buildCreateActivityFormData(
     formData.append('contact_number', form.contactNumber.trim())
   }
   formData.append('category_uuid', form.categoryUuid)
-  formData.append('event_type', 'daily')
+  const isSpecificDate = form.scheduleMode === 'specific_date'
+  formData.append('event_type', isSpecificDate ? 'single' : 'daily')
   formData.append('event_config', 'open_ticket')
-  formData.append('schedule_type', 'daily')
+  formData.append('schedule_type', isSpecificDate ? 'single' : 'daily')
   formData.append('city', form.city.trim())
 
   if (form.address.trim()) {
     formData.append('address', form.address.trim())
+  }
+
+  if (isSpecificDate) {
+    const date = form.eventDate.trim()
+    const timeStart = normalizeTimeForApi(form.eventTimeStart)
+    const timeEnd = normalizeTimeForApi(form.eventTimeEnd)
+    formData.append('schedules[0][date_from]', date)
+    formData.append('schedules[0][date_to]', date)
+    formData.append('schedules[0][status]', 'published')
+    formData.append('schedules[0][time][0][time_start]', timeStart)
+    formData.append('schedules[0][time][0][time_end]', timeEnd)
+    formData.append('schedules[0][time][0][status]', 'published')
+    formData.append('ticket_available_from', date)
+    formData.append('ticket_available_to', date)
   }
 
   if (options.publish) {
@@ -105,6 +126,22 @@ export function buildCreateActivityFormData(
   }
 
   return formData
+}
+
+export function validateCreateActivitySchedule(
+  form: CreateActivityForm,
+): string | null {
+  if (form.scheduleMode !== 'specific_date') return null
+  if (!form.eventDate.trim()) {
+    return 'Please select the event date.'
+  }
+  if (!form.eventTimeStart.trim() || !form.eventTimeEnd.trim()) {
+    return 'Please set the event start and end time.'
+  }
+  if (form.eventTimeEnd.trim() < form.eventTimeStart.trim()) {
+    return 'Event end time must be after or equal to the start time.'
+  }
+  return null
 }
 
 export function validateCreateActivityTickets(

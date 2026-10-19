@@ -8,6 +8,7 @@ type TicketTypeCardProps = {
   ticket: TicketType
   quantity: number
   unavailable?: boolean
+  unavailableReason?: string | null
   visitTime?: string
   visitTimeSlots?: Array<string>
   onVisitTimeChange?: (value: string) => void
@@ -19,6 +20,7 @@ export function TicketTypeCard({
   ticket,
   quantity,
   unavailable = false,
+  unavailableReason = null,
   visitTime = '',
   visitTimeSlots,
   onVisitTimeChange,
@@ -58,8 +60,8 @@ export function TicketTypeCard({
             </span>
           ) : null}
           {unavailable ? (
-            <span className="mt-1.5 inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-rose-200">
-              Unavailable
+            <span className="mt-1.5 inline-flex max-w-full rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-rose-200">
+              {unavailableReason?.trim() || 'Unavailable'}
             </span>
           ) : null}
         </div>
