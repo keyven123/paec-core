@@ -117,6 +117,111 @@ export function StepBasics({
             </select>
           </div>
 
+          <div>
+            <label className={labelClassName}>
+              Schedule <span className="text-red-500">*</span>
+            </label>
+            <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors ${
+                  form.scheduleMode === 'daily'
+                    ? 'border-paec-violet bg-violet-50/70 ring-1 ring-paec-violet/20'
+                    : 'border-violet-100 bg-white hover:border-violet-200'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`${useCategoryUuid ? 'edit' : 'create'}-schedule-mode`}
+                  checked={form.scheduleMode === 'daily'}
+                  onChange={() =>
+                    onChange({
+                      scheduleMode: 'daily',
+                      eventDate: '',
+                      eventTimeStart: '',
+                      eventTimeEnd: '',
+                    })
+                  }
+                  className="mt-0.5 size-4 accent-paec-violet"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-foreground">
+                    Daily
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Ongoing activity. Customers pick any visit date.
+                  </span>
+                </span>
+              </label>
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors ${
+                  form.scheduleMode === 'specific_date'
+                    ? 'border-paec-violet bg-violet-50/70 ring-1 ring-paec-violet/20'
+                    : 'border-violet-100 bg-white hover:border-violet-200'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`${useCategoryUuid ? 'edit' : 'create'}-schedule-mode`}
+                  checked={form.scheduleMode === 'specific_date'}
+                  onChange={() => onChange({ scheduleMode: 'specific_date' })}
+                  className="mt-0.5 size-4 accent-paec-violet"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-foreground">
+                    Specific date
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Single event on one date with a set time.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            {form.scheduleMode === 'specific_date' ? (
+              <div className="mt-3 grid gap-4 rounded-xl border border-violet-100 bg-violet-50/30 p-4 sm:grid-cols-3">
+                <div className="sm:col-span-1">
+                  <label className={labelClassName}>
+                    Event date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={form.eventDate}
+                    onChange={(e) => onChange({ eventDate: e.target.value })}
+                    className={`${fieldClassName} mt-1.5`}
+                  />
+                </div>
+                <div>
+                  <label className={labelClassName}>
+                    Start time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={form.eventTimeStart}
+                    onChange={(e) =>
+                      onChange({ eventTimeStart: e.target.value })
+                    }
+                    className={`${fieldClassName} mt-1.5`}
+                  />
+                </div>
+                <div>
+                  <label className={labelClassName}>
+                    End time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={form.eventTimeEnd}
+                    onChange={(e) => onChange({ eventTimeEnd: e.target.value })}
+                    className={`${fieldClassName} mt-1.5`}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground sm:col-span-3">
+                  This creates one schedule only — customers book this date and
+                  time window.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClassName}>

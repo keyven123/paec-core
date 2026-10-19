@@ -33,7 +33,8 @@ export type AdminEventTicket = {
   is_unlimited: boolean
   visit_policy: string | null
   validity_days: number | null
-  operation_days?: 'any' | 'weekdays' | 'weekends' | string | null
+  operation_days?: 'any' | 'weekdays' | 'weekends' | 'custom' | string | null
+  operation_custom_days?: Array<string> | null
   operation_hours_from?: string | null
   operation_hours_to?: string | null
   ticket_limit_per_user: number | null

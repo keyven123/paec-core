@@ -15,10 +15,13 @@ import { useStartBooking } from '@/lib/useStartBooking'
 import { useStoredUser } from '@/lib/useStoredUser'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
 import {
+  allowsOperationDay,
   buildOperationTimeSlots,
   isTicketAvailableForBooking,
   isTicketCurrentlyOnSale,
   isVisitDateBookable,
+  operationDayUnavailableBadge,
+  operationDayUnavailableMessage,
   ticketHasOperationHours,
 } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
@@ -57,14 +60,21 @@ export function BookingSidebar({
     attraction.locations.find((location) => location.uuid === locationUuid) ??
     attraction.locations[0]
 
+  const isFixedVisitDate = Boolean(attraction.fixedVisitDate)
+
   useEffect(() => {
     const defaultLocation = attraction.locations[0]
     setLocationUuid(defaultLocation?.uuid ?? '')
     setAppliedPromoCode(null)
-    setVisitDate('')
-    setVisitTime('')
+    setVisitDate(attraction.fixedVisitDate ?? '')
+    setVisitTime(attraction.fixedVisitTimeStart ?? '')
     setQuantities({})
-  }, [attraction.eventUuid, attraction.locations])
+  }, [
+    attraction.eventUuid,
+    attraction.locations,
+    attraction.fixedVisitDate,
+    attraction.fixedVisitTimeStart,
+  ])
 
   useEffect(() => {
     if (selectedLocation) {
@@ -192,13 +202,19 @@ export function BookingSidebar({
     }
     for (const ticket of selectedTickets) {
       if (!isTicketAvailableForBooking(ticket, visitDate)) {
-        const days = ticket.operationDays
         toast.error(
-          days === 'weekdays'
-            ? `${ticket.name} is available on weekdays only.`
-            : days === 'weekends'
-              ? `${ticket.name} is available on weekends only.`
-              : `${ticket.name} is unavailable for the selected date.`,
+          !allowsOperationDay(
+            visitDate,
+            ticket.operationDays,
+            ticket.operationCustomDays,
+          )
+            ? operationDayUnavailableMessage(
+                visitDate,
+                ticket.name,
+                ticket.operationDays,
+                ticket.operationCustomDays,
+              )
+            : `${ticket.name} is unavailable for the selected date.`,
         )
         return
       }
@@ -274,30 +290,44 @@ export function BookingSidebar({
           />
         )}
 
-        <VisitDatePicker
-          value={visitDate}
-          onChange={(value) => {
-            setVisitDate(value)
-            setVisitTime('')
-          }}
-          blockedDates={blockedDates}
-          todayCutoffTime={attraction.todayCutoffTime}
-          onRejectedDate={(reason) => {
-            if (reason === 'blocked') {
-              toast.error(
-                'This date is not available. Please choose another visit date.',
-              )
-              return
-            }
-            if (reason === 'cutoff') {
-              toast.error(
-                "Today's visit date is no longer available. Please choose another date.",
-              )
-              return
-            }
-            toast.error('Past dates cannot be selected.')
-          }}
-        />
+        {isFixedVisitDate ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+              Event date
+            </p>
+            <div className="rounded-xl border border-violet-100 bg-violet-50/40 px-3 py-2.5 text-sm font-medium text-foreground">
+              {attraction.fixedVisitDate}
+              {attraction.fixedVisitTimeStart && attraction.fixedVisitTimeEnd
+                ? ` · ${attraction.fixedVisitTimeStart} – ${attraction.fixedVisitTimeEnd}`
+                : null}
+            </div>
+          </div>
+        ) : (
+          <VisitDatePicker
+            value={visitDate}
+            onChange={(value) => {
+              setVisitDate(value)
+              setVisitTime('')
+            }}
+            blockedDates={blockedDates}
+            todayCutoffTime={attraction.todayCutoffTime}
+            onRejectedDate={(reason) => {
+              if (reason === 'blocked') {
+                toast.error(
+                  'This date is not available. Please choose another visit date.',
+                )
+                return
+              }
+              if (reason === 'cutoff') {
+                toast.error(
+                  "Today's visit date is no longer available. Please choose another date.",
+                )
+                return
+              }
+              toast.error('Past dates cannot be selected.')
+            }}
+          />
+        )}
 
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">
@@ -315,6 +345,22 @@ export function BookingSidebar({
                   visitDate,
                 )
                 const slots = ticketTimeSlots[ticket.id]
+                const unavailableReason =
+                  unavailable &&
+                  visitDate &&
+                  !allowsOperationDay(
+                    visitDate,
+                    ticket.operationDays,
+                    ticket.operationCustomDays,
+                  )
+                    ? operationDayUnavailableBadge(
+                        visitDate,
+                        ticket.operationDays,
+                        ticket.operationCustomDays,
+                      )
+                    : unavailable
+                      ? 'Unavailable'
+                      : null
 
                 return (
                   <TicketTypeCard
@@ -322,6 +368,7 @@ export function BookingSidebar({
                     ticket={ticket}
                     quantity={quantities[ticket.id] ?? 0}
                     unavailable={unavailable}
+                    unavailableReason={unavailableReason}
                     visitTime={slots ? visitTime : undefined}
                     visitTimeSlots={slots}
                     onVisitTimeChange={slots ? setVisitTime : undefined}

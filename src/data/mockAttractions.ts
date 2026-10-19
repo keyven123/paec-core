@@ -16,8 +16,11 @@ export type TicketType = {
   flashSaleFrom?: string | null
   /** Purchase / countdown window end (flash sale tickets only). */
   flashSaleTo?: string | null
-  /** any | weekdays | weekends */
-  operationDays?: 'any' | 'weekdays' | 'weekends'
+  /** any | weekdays | weekends | custom */
+  operationDays?: 'any' | 'weekdays' | 'weekends' | 'custom'
+  operationCustomDays?: Array<
+    'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+  > | null
   operationHoursFrom?: string | null
   operationHoursTo?: string | null
 }
@@ -60,6 +63,11 @@ export type Attraction = {
   todayCutoffTime?: string | null
   contactEmail?: string | null
   contactNumber?: string | null
+  /** When set, activity is a single-date event — visit date is fixed. */
+  fixedVisitDate?: string | null
+  /** HH:MM schedule window for fixedVisitDate activities. */
+  fixedVisitTimeStart?: string | null
+  fixedVisitTimeEnd?: string | null
 }
 
 export type HeroSlide = {

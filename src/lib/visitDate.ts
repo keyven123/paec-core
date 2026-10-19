@@ -47,13 +47,49 @@ export function isVisitDateBookable(
   return true
 }
 
+export type OperationDayKey =
+  | 'mon'
+  | 'tue'
+  | 'wed'
+  | 'thu'
+  | 'fri'
+  | 'sat'
+  | 'sun'
+
+export type OperationDaysMode = 'any' | 'weekdays' | 'weekends' | 'custom'
+
+export const OPERATION_DAY_OPTIONS: Array<{
+  key: OperationDayKey
+  label: string
+}> = [
+  { key: 'mon', label: 'Monday' },
+  { key: 'tue', label: 'Tuesday' },
+  { key: 'wed', label: 'Wednesday' },
+  { key: 'thu', label: 'Thursday' },
+  { key: 'fri', label: 'Friday' },
+  { key: 'sat', label: 'Saturday' },
+  { key: 'sun', label: 'Sunday' },
+]
+
+/** JS getDay() 0=Sun … 6=Sat → operation day key */
+const JS_DAY_TO_KEY: Record<number, OperationDayKey> = {
+  0: 'sun',
+  1: 'mon',
+  2: 'tue',
+  3: 'wed',
+  4: 'thu',
+  5: 'fri',
+  6: 'sat',
+}
+
 type TicketAvailabilityWindow = {
   availableFrom?: string | null
   availableTo?: string | null
   featureOnFlashSale?: boolean
   flashSaleFrom?: string | null
   flashSaleTo?: string | null
-  operationDays?: 'any' | 'weekdays' | 'weekends'
+  operationDays?: OperationDaysMode
+  operationCustomDays?: Array<OperationDayKey> | null
   operationHoursFrom?: string | null
   operationHoursTo?: string | null
 }
@@ -112,10 +148,11 @@ export function isTicketCurrentlyOnSale(
   return isWithinSaleWindow(ticket.availableFrom, ticket.availableTo, now)
 }
 
-/** Manila weekday: Mon–Fri vs Sat–Sun. */
+/** Manila weekday: Mon–Fri vs Sat–Sun, or custom checked days. */
 export function allowsOperationDay(
   visitDate: string,
-  operationDays: 'any' | 'weekdays' | 'weekends' | undefined,
+  operationDays: OperationDaysMode | undefined,
+  operationCustomDays?: Array<OperationDayKey> | null,
 ): boolean {
   if (!operationDays || operationDays === 'any') return true
   const [y, m, d] = visitDate.split('-').map(Number)
@@ -124,7 +161,59 @@ export function allowsOperationDay(
   const isWeekend = day === 0 || day === 6
   if (operationDays === 'weekdays') return !isWeekend
   if (operationDays === 'weekends') return isWeekend
+  if (operationDays === 'custom') {
+    const allowed = operationCustomDays ?? []
+    if (allowed.length === 0) return false
+    const key = JS_DAY_TO_KEY[day]
+    return key ? allowed.includes(key) : false
+  }
   return true
+}
+
+export function operationDayUnavailableMessage(
+  visitDate: string,
+  ticketName: string,
+  operationDays: OperationDaysMode | undefined,
+  _operationCustomDays?: Array<OperationDayKey> | null,
+): string {
+  if (operationDays === 'weekdays') {
+    return `${ticketName} is available on weekdays only.`
+  }
+  if (operationDays === 'weekends') {
+    return `${ticketName} is available on weekends only.`
+  }
+  if (operationDays === 'custom') {
+    const [y, m, d] = visitDate.split('-').map(Number)
+    if (y && m && d) {
+      const key = JS_DAY_TO_KEY[new Date(y, m - 1, d).getDay()]
+      const label =
+        OPERATION_DAY_OPTIONS.find((option) => option.key === key)?.label ??
+        'this day'
+      return `${ticketName} is not available on ${label}.`
+    }
+  }
+  return `${ticketName} is unavailable for the selected date.`
+}
+
+/** Short badge label for the ticket card (no ticket name prefix). */
+export function operationDayUnavailableBadge(
+  visitDate: string,
+  operationDays: OperationDaysMode | undefined,
+  _operationCustomDays?: Array<OperationDayKey> | null,
+): string {
+  if (operationDays === 'weekdays') return 'Weekdays only'
+  if (operationDays === 'weekends') return 'Weekends only'
+  if (operationDays === 'custom') {
+    const [y, m, d] = visitDate.split('-').map(Number)
+    if (y && m && d) {
+      const key = JS_DAY_TO_KEY[new Date(y, m - 1, d).getDay()]
+      const label =
+        OPERATION_DAY_OPTIONS.find((option) => option.key === key)?.label ??
+        'this day'
+      return `Unavailable on ${label}`
+    }
+  }
+  return 'Unavailable'
 }
 
 /**
@@ -143,7 +232,15 @@ export function isTicketAvailableForVisitDate(
   const to = ticket.availableTo?.slice(0, 10)
   if (to && visitDate > to) return false
 
-  if (!allowsOperationDay(visitDate, ticket.operationDays)) return false
+  if (
+    !allowsOperationDay(
+      visitDate,
+      ticket.operationDays,
+      ticket.operationCustomDays,
+    )
+  ) {
+    return false
+  }
 
   return true
 }

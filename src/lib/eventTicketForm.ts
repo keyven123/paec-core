@@ -25,7 +25,10 @@ export type EventTicketFormState = {
   schedule_time_uuid: string
   status: string
   with_operations: boolean
-  operation_days: 'any' | 'weekdays' | 'weekends'
+  operation_days: 'any' | 'weekdays' | 'weekends' | 'custom'
+  operation_custom_days: Array<
+    'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+  >
   operation_hours_from: string
   operation_hours_to: string
   with_discount: boolean
@@ -57,6 +60,7 @@ export const emptyEventTicketForm = (): EventTicketFormState => ({
   status: 'active',
   with_operations: false,
   operation_days: 'any',
+  operation_custom_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
   operation_hours_from: '',
   operation_hours_to: '',
   with_discount: false,
@@ -118,9 +122,16 @@ export function ticketToForm(
       !!ticket.operation_hours_from ||
       !!ticket.operation_hours_to,
     operation_days:
-      ticket.operation_days === 'weekdays' || ticket.operation_days === 'weekends'
+      ticket.operation_days === 'weekdays' ||
+      ticket.operation_days === 'weekends' ||
+      ticket.operation_days === 'custom'
         ? ticket.operation_days
         : 'any',
+    operation_custom_days: Array.isArray(ticket.operation_custom_days)
+      ? (ticket.operation_custom_days.filter((day) =>
+          ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day),
+        ) as Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>)
+      : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     operation_hours_from: (ticket.operation_hours_from ?? '').slice(0, 5),
     operation_hours_to: (ticket.operation_hours_to ?? '').slice(0, 5),
     with_discount: hasDiscount,
@@ -182,6 +193,13 @@ export function validateEventTicketForm(
   }
 
   if (form.with_operations) {
+    if (
+      form.operation_days === 'custom' &&
+      form.operation_custom_days.length === 0
+    ) {
+      errors.operation_custom_days =
+        'Select at least one available day for custom operations'
+    }
     if (
       form.operation_hours_from &&
       form.operation_hours_to &&
@@ -305,6 +323,10 @@ export function buildCreateTicketPayload(
     is_virtual: false,
     virtual_event_url: null,
     operation_days: form.with_operations ? form.operation_days : 'any',
+    operation_custom_days:
+      form.with_operations && form.operation_days === 'custom'
+        ? form.operation_custom_days
+        : null,
     operation_hours_from:
       form.with_operations && form.operation_hours_from
         ? form.operation_hours_from
@@ -361,6 +383,10 @@ export function buildUpdateTicketPayload(
     is_virtual: false,
     virtual_event_url: null,
     operation_days: form.with_operations ? form.operation_days : 'any',
+    operation_custom_days:
+      form.with_operations && form.operation_days === 'custom'
+        ? form.operation_custom_days
+        : null,
     operation_hours_from:
       form.with_operations && form.operation_hours_from
         ? form.operation_hours_from

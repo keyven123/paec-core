@@ -209,6 +209,14 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
             <Field label="Contact Email" value={form.contactEmail} />
             <Field label="Contact Number" value={form.contactNumber || '—'} />
             <Field label="Category" value={form.category} />
+            <Field
+              label="Schedule"
+              value={
+                form.scheduleMode === 'specific_date'
+                  ? `Specific date · ${form.eventDate || '—'} · ${form.eventTimeStart || '—'}–${form.eventTimeEnd || '—'}`
+                  : 'Daily'
+              }
+            />
             <Field label="City" value={form.city} />
             <Field label="Address" value={form.address} />
             <div className="sm:col-span-2">
