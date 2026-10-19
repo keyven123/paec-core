@@ -28,7 +28,9 @@ import {
   getPhoneHref,
   openEmailComposer,
 } from '@/lib/contactLinks'
+import { persistAffiliateRefFromUrl } from '@/lib/affiliateRef'
 import { cn } from '@/lib/utils'
+import { affiliatePublicService } from '@/services/affiliatePublicService'
 import { marketplaceService } from '@/services/marketplaceService'
 
 export function AttractionDetailPage() {
@@ -81,6 +83,26 @@ export function AttractionDetailPage() {
       cancelled = true
     }
   }, [attractionId])
+
+  // Affiliate referral: remember the code for this activity and count the click once per visit.
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')?.trim()
+    if (!ref) return
+    persistAffiliateRefFromUrl(ref, attractionId)
+    void affiliatePublicService.trackClick(
+      ref,
+      `/attractions/${attractionId}`,
+    )
+  }, [attractionId])
+
+  // Also key the stored code by the activity's uuid/id so checkout can find it either way.
+  useEffect(() => {
+    if (!attraction) return
+    const ref = new URLSearchParams(window.location.search).get('ref')?.trim()
+    if (!ref) return
+    persistAffiliateRefFromUrl(ref, attraction.eventUuid)
+    persistAffiliateRefFromUrl(ref, attraction.id)
+  }, [attraction])
 
   if (loading) {
     return (

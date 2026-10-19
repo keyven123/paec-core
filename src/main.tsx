@@ -15,6 +15,7 @@ import { AdminActivityDetailPage } from './routes/admin/AdminActivityDetailPage'
 import { AdminActivityScannerPage } from './routes/admin/AdminActivityScannerPage'
 import { AdminActivityCalendarPage } from './routes/admin/AdminActivityCalendarPage'
 import { AdminActivityTicketsPage } from './routes/admin/AdminActivityTicketsPage'
+import { AdminAffiliatePartnersPage } from './routes/admin/AdminAffiliatePartnersPage'
 import { AdminCmsPage } from './routes/admin/AdminCmsPage'
 import { AdminCreateActivityPage } from './routes/admin/AdminCreateActivityPage'
 import { AdminEditActivityPage } from './routes/admin/AdminEditActivityPage'
@@ -51,6 +52,7 @@ const accountSections: Array<AccountSection> = [
   'tickets',
   'coupons',
   'transactions',
+  'affiliate',
   'profile',
 ]
 
@@ -226,6 +228,12 @@ const adminPromoCodeRoute = createRoute({
   component: AdminPromoCodePage,
 })
 
+const adminAffiliatePartnersRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/affiliate-partners',
+  component: AdminAffiliatePartnersPage,
+})
+
 const adminPaymentGatewayRoute = createRoute({
   getParentRoute: () => adminLayoutRoute,
   path: '/admin/payment-gateways',
@@ -299,6 +307,7 @@ const routeTree = rootRoute.addChildren([
     adminEditVenueRoute,
     adminVenueInquiriesRoute,
     adminPromoCodeRoute,
+    adminAffiliatePartnersRoute,
     adminPaymentGatewayRoute,
     adminUserManagementRoute,
     adminUserDetailRoute,

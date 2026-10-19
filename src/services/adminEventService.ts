@@ -57,6 +57,10 @@ export type AdminEvent = {
   cancelled_at: string | null
   completed_at: string | null
   slug?: string
+  affiliate_enabled?: boolean
+  affiliate_commission_percent?: number | null
+  /** Y-m-d calendar day, or null when the affiliate program has no end date. */
+  affiliate_ends_at?: string | null
   total_revenue?: number
   ticket_sold?: number
   total_orders?: number
@@ -157,7 +161,49 @@ function downloadCsvBlob(
   window.URL.revokeObjectURL(url)
 }
 
+export type UpdateEventAffiliatePayload = {
+  affiliate_enabled: boolean
+  affiliate_commission_percent?: number | null
+  /** Y-m-d */
+  affiliate_ends_at?: string | null
+}
+
+export type PaginatedAdminEventList = {
+  data: Array<AdminEvent>
+  meta: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+    from?: number | null
+    to?: number | null
+  }
+}
+
 export const adminEventService = {
+  async listEvents(params?: {
+    q?: string
+    page?: number
+    per_page?: number
+    status?: string
+  }): Promise<PaginatedAdminEventList> {
+    const { data } = await adminApi.get<PaginatedAdminEventList>('/v1/events', {
+      params,
+    })
+    return data
+  },
+
+  async updateEventAffiliateSettings(
+    uuid: string,
+    payload: UpdateEventAffiliatePayload,
+  ): Promise<{ data: AdminEvent }> {
+    const { data } = await adminApi.patch<{ data: AdminEvent }>(
+      `/v1/events/${uuid}/affiliate-settings`,
+      payload,
+    )
+    return data
+  },
+
   async getEventDetails(uuid: string): Promise<{ data: AdminEvent }> {
     const { data } = await adminApi.get<{ data: AdminEvent }>(
       `/v1/events/${uuid}`,

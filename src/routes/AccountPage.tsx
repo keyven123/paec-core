@@ -1,8 +1,10 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { Tag } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { AccountPlaceholderSection } from '@/components/account/AccountPlaceholderSection'
+import { AffiliatePartnerSection } from '@/components/account/AffiliatePartnerSection'
 import { AccountSidebar } from '@/components/account/AccountSidebar'
 import { MyTransactionsSection } from '@/components/account/MyTransactionsSection'
 import { MyTicketsSection } from '@/components/account/MyTicketsSection'
@@ -17,6 +19,7 @@ export function AccountPage() {
 
   useEffect(() => {
     if (!isCustomerAuthenticated()) {
+      toast.error('Please sign in to view your account.')
       navigate({ to: '/' })
     }
   }, [navigate])
@@ -70,6 +73,7 @@ export function AccountPage() {
               />
             )}
             {section === 'transactions' && <MyTransactionsSection />}
+            {section === 'affiliate' && <AffiliatePartnerSection />}
             {section === 'profile' && <ProfileSection user={user} />}
           </section>
         </div>

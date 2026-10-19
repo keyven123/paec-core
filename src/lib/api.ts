@@ -70,6 +70,11 @@ export const adminApi = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(CUSTOMER_TOKEN_KEY)
   if (token) {
+    if (!isTokenValid(token)) {
+      localStorage.removeItem(CUSTOMER_TOKEN_KEY)
+      localStorage.removeItem('paec_user')
+      return Promise.reject(new Error('Your session has expired. Please sign in again.'))
+    }
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -96,7 +101,29 @@ adminApi.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error),
+  (error) => {
+    const status = error.response?.status
+    const message = error.response?.data?.message
+    const url = String(error.config?.url ?? '')
+    const isAuthEndpoint =
+      url.includes('/login') ||
+      url.includes('/register') ||
+      url.includes('/verify-email') ||
+      url.includes('/password')
+
+    if (
+      !isAuthEndpoint &&
+      (status === 401 || message === 'Unauthenticated.')
+    ) {
+      localStorage.removeItem(CUSTOMER_TOKEN_KEY)
+      localStorage.removeItem('paec_user')
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('paec:auth-change'))
+      }
+    }
+
+    return Promise.reject(error)
+  },
 )
 
 adminApi.interceptors.response.use(
@@ -143,7 +170,11 @@ export function getApiErrorMessage(error: unknown, fallback = 'Something went wr
   }
 
   if (error.response?.status === 401) {
-    return 'Invalid email or password.'
+    const url = String(error.config?.url ?? '')
+    if (url.includes('/login') || url.includes('/admin/login')) {
+      return 'Invalid email or password.'
+    }
+    return 'Please sign in again to continue.'
   }
 
   if (error.code === 'ERR_NETWORK') {

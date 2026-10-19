@@ -48,6 +48,8 @@ export type CartItemPayload = {
 export type CartCheckoutPayload = {
   payment_gateway_uuid?: string
   payment_channel?: PaynamicsChannel
+  /** Affiliate referral codes keyed by event uuid. */
+  affiliate_codes?: Record<string, string>
 }
 
 export const cartService = {

@@ -3,6 +3,7 @@ import type {
   CheckoutResponse,
   GroupOrder,
 } from '@/services/transactionService'
+import { clearAffiliateRef } from '@/lib/affiliateRef'
 
 const ORDER_CONFIRMATION_KEY = 'paec_order_confirmation'
 
@@ -90,6 +91,14 @@ export function saveOrderConfirmation(
   confirmation: OrderConfirmation | Array<OrderConfirmation>,
 ): void {
   sessionStorage.setItem(ORDER_CONFIRMATION_KEY, JSON.stringify(confirmation))
+
+  // The purchase went through, so the stored affiliate referral no longer applies.
+  const confirmations = Array.isArray(confirmation)
+    ? confirmation
+    : [confirmation]
+  for (const { order } of confirmations) {
+    clearAffiliateRef(order.eventUuid, order.attractionId)
+  }
 }
 
 export function loadOrderConfirmations(): Array<OrderConfirmation> {

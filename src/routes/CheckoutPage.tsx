@@ -34,6 +34,7 @@ import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
 import { useStoredUser } from '@/lib/useStoredUser'
+import { peekAffiliateRefFromUrl } from '@/lib/affiliateRef'
 import { addSessionToCart, cartItemPayload, cartItemSession } from '@/lib/cart'
 import {
   clearCheckoutSession,
@@ -373,9 +374,22 @@ export function CheckoutPage() {
           : {}
 
       if (loggedInUser) {
+        const affiliateCodes: Record<string, string> = {}
+        for (const entry of cartEntries) {
+          const code = peekAffiliateRefFromUrl(
+            undefined,
+            entry.item.event_uuid,
+            entry.session.attractionId,
+          )
+          if (code) affiliateCodes[entry.item.event_uuid] = code
+        }
+
         const result = await cartService.checkout({
           payment_gateway_uuid: gateway?.uuid,
           ...paynamicsPayload,
+          ...(Object.keys(affiliateCodes).length > 0
+            ? { affiliate_codes: affiliateCodes }
+            : {}),
         })
         const placed = result.orders ?? []
         const orders = placed.flatMap((placedOrder) => {
@@ -430,6 +444,11 @@ export function CheckoutPage() {
           seats: [],
         })),
         promo_code_uuid: session.appliedPromoCode?.uuid,
+        affiliate_code: peekAffiliateRefFromUrl(
+          undefined,
+          session.eventUuid,
+          session.attractionId,
+        ),
       }
 
       const temp = await transactionService.createGuestTempTransaction({

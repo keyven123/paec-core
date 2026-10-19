@@ -13,12 +13,14 @@ import {
   ALL_CATEGORIES,
   buildActivityCategories,
 } from '@/lib/activityCategories'
+import { persistAffiliateRefFromUrl } from '@/lib/affiliateRef'
 import { pickFlashSales, type FlashSaleInfo } from '@/lib/flashSale'
 import {
   buildHeroSlides,
   marketplaceService,
   mergeCatalogActivities,
 } from '@/services/marketplaceService'
+import { affiliatePublicService } from '@/services/affiliatePublicService'
 import { venueListingService } from '@/services/venueListingService'
 
 const FLASH_SALE_SCAN_LIMIT = 8
@@ -33,6 +35,13 @@ export function HomePage() {
   const [venues, setVenues] = useState<Array<PublicVenueListing>>([])
   const [flashSales, setFlashSales] = useState<FlashSaleInfo[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')?.trim()
+    if (!ref) return
+    persistAffiliateRefFromUrl(ref, '__home__')
+    void affiliatePublicService.trackClick(ref, '/')
+  }, [])
 
   useEffect(() => {
     let cancelled = false

@@ -37,10 +37,14 @@ export const PAEC_PLATFORM_ADMIN_PERMISSION_CODES = new Set([
   'promo-codes',
   'cms',
   'organizations',
+  'affiliate-partners',
+  'affiliate-events',
+  'affiliate-funs',
+  'affiliate-payouts',
   'profile',
 ])
 
-/** Merchant partner permissions relevant to PAEC (no affiliate, compliance, or ticketoc-only modules). */
+/** Merchant partner permissions relevant to PAEC (no marketing MLM, compliance, or ticketoc-only modules). */
 export const PAEC_MERCHANT_PARTNER_PERMISSION_CODES = new Set([
   'events',
   'event-tickets',

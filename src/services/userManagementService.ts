@@ -1,4 +1,8 @@
 import { adminApi } from '@/lib/api'
+import type {
+  AffiliateBankDetails,
+  AffiliateStats,
+} from '@/services/affiliatePartnerService'
 
 export type CustomerUser = {
   uuid: string
@@ -20,6 +24,12 @@ export type CustomerUser = {
   marketing_consent?: boolean
   marketing_consent_date?: string | null
   terms_accepted_at?: string | null
+  affiliate_status?: 'none' | 'approved' | 'suspended' | string
+  affiliate_code?: string | null
+  affiliate_applied_at?: string | null
+  affiliate_approved_at?: string | null
+  affiliate_suspend_reason?: string | null
+  affiliate_suspended_at?: string | null
   created_at: string
   updated_at: string
   image?: {
@@ -65,6 +75,46 @@ type UserListResponse = {
     last_page: number
     per_page: number
     total: number
+    from?: number | null
+    to?: number | null
+  }
+}
+
+export type AffiliatePartnerAdminConversionRow = {
+  uuid: string
+  entry_type: 'credit' | 'reversal'
+  order_total: number
+  commission_percent: number
+  commission_amount: number
+  created_at: string
+  event?: { uuid: string; event_name: string }
+  transaction?: { uuid: string; order_number: string; paid_at: string | null }
+  ticket?: { uuid: string; ticket_number: string | null } | null
+}
+
+export type AffiliatePartnerAdminStatsPayload = {
+  user: {
+    uuid: string
+    full_name: string
+    email: string
+    affiliate_code: string | null
+    affiliate_status: string
+    affiliate_applied_at: string | null
+    affiliate_approved_at: string | null
+    terms_accepted_at: string | null
+    affiliate_suspend_reason: string | null
+    affiliate_suspended_at: string | null
+  }
+  stats: AffiliateStats
+  bank_details: AffiliateBankDetails
+  conversions: {
+    data: Array<AffiliatePartnerAdminConversionRow>
+    meta: {
+      current_page: number
+      last_page: number
+      per_page: number
+      total: number
+    }
   }
 }
 
@@ -89,9 +139,38 @@ export const userManagementService = {
     page?: number
     per_page?: number
     status?: string
+    affiliate_status?: string
   }): Promise<UserListResponse> {
     const { data } = await adminApi.get<UserListResponse>('/v1/users', { params })
     return data
+  },
+
+  async getAffiliatePartnerStats(
+    uuid: string,
+    params?: { conversions_page?: number; conversions_per_page?: number },
+  ): Promise<AffiliatePartnerAdminStatsPayload> {
+    const { data } = await adminApi.get<{
+      data: AffiliatePartnerAdminStatsPayload
+    }>(`/v1/users/${uuid}/affiliate-partner-stats`, { params })
+    return data.data
+  },
+
+  async suspendAffiliatePartner(
+    uuid: string,
+    reason: string,
+  ): Promise<CustomerUser> {
+    const { data } = await adminApi.patch<{ data: CustomerUser }>(
+      `/v1/users/${uuid}/affiliate-suspend`,
+      { reason },
+    )
+    return data.data
+  },
+
+  async reinstateAffiliatePartner(uuid: string): Promise<CustomerUser> {
+    const { data } = await adminApi.patch<{ data: CustomerUser }>(
+      `/v1/users/${uuid}/affiliate-reinstate`,
+    )
+    return data.data
   },
 
   async exportCustomers(): Promise<void> {

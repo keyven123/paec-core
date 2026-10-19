@@ -1,6 +1,7 @@
 import type { User } from '@/data/mockUser'
 import { mockUser } from '@/data/mockUser'
 import { CUSTOMER_TOKEN_KEY, getApiErrorMessage } from '@/lib/api'
+import { isTokenValid } from '@/lib/tokenUtils'
 import { authService } from '@/services/authService'
 
 const STORAGE_KEY = 'paec_user'
@@ -36,7 +37,7 @@ export function getCustomerToken(): string | null {
 }
 
 export function isCustomerAuthenticated(): boolean {
-  return Boolean(getCustomerToken() && getStoredUser())
+  return Boolean(isTokenValid(getCustomerToken()) && getStoredUser())
 }
 
 export async function signUp(payload: {
