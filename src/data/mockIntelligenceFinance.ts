@@ -1,5 +1,4 @@
 export type FinancePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
-export type FinanceSubTab = 'platform' | 'operator' | 'transaction'
 
 export const financeKpis = {
   grossSales: { value: 0, change: -100 },
