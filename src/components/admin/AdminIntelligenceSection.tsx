@@ -18,7 +18,9 @@ export function AdminIntelligenceSection() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="shrink-0">
-        <h1 className="text-xl font-bold text-foreground lg:text-2xl">Intelligence</h1>
+        <h1 className="text-xl font-bold text-foreground lg:text-2xl">
+          Intelligence
+        </h1>
         <p className="text-xs text-muted-foreground sm:text-sm">
           Analytics and insights for your attractions and bookings
         </p>
