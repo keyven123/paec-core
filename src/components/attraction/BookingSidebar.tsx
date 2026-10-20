@@ -153,6 +153,8 @@ export function BookingSidebar({
     .map((ticket) => ({
       ticketTypeId: ticket.id,
       name: ticket.name,
+      ticketKind: ticket.ticketKind ?? 'regular',
+      termsAndConditions: ticket.termsAndConditions ?? null,
       unitPrice: ticket.price,
       originalUnitPrice: ticket.originalPrice,
       quantity: quantities[ticket.id],

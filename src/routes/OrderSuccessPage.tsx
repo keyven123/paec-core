@@ -113,16 +113,42 @@ export function OrderSuccessPage() {
     ticket: {
       activityName: order.attractionName,
       ticketTypeName: ticket.ticketTypeName,
+      ticketKind: ticket.ticketKind,
+      termsAndConditions: ticket.termsAndConditions,
       ticketNumber: ticket.ticketNumber,
       qrCode: ticket.qrCode,
       visitDateLabel,
       location: order.location,
       orderNumber,
       holder,
+      priceLabel:
+        ticket.unitPrice !== null
+          ? `₱${ticket.unitPrice.toLocaleString('en-PH', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`
+          : null,
+      positionLabel: `${tickets.indexOf(ticket) + 1} of ${tickets.length}`,
+      imageUrl: order.image || null,
       logoUrl: ticketLogoUrl,
     },
     qrSvg: qrRefs.current.get(ticket.uuid)?.querySelector('svg') ?? null,
   })
+
+  // Gift certificate orders download their group pass in the gift design.
+  const isGiftGroup =
+    downloadableTickets.length > 0 &&
+    downloadableTickets.every(
+      (ticket) => ticket.ticketKind === 'gift_certificate',
+    )
+  const groupTotal =
+    downloadableTickets.length > 0 &&
+    downloadableTickets.every((ticket) => ticket.unitPrice !== null)
+      ? downloadableTickets.reduce(
+          (sum, ticket) => sum + (ticket.unitPrice ?? 0),
+          0,
+        )
+      : null
 
   const toGroupPassSource = (qrCode: string): GroupPassSource => ({
     pass: {
@@ -137,6 +163,20 @@ export function OrderSuccessPage() {
       orderNumber,
       holder,
       logoUrl: ticketLogoUrl,
+      ticketKind: isGiftGroup ? 'gift_certificate' : 'regular',
+      ticketTypeName:
+        ticketBreakdown.length === 1 ? ticketBreakdown[0].name : null,
+      termsAndConditions:
+        downloadableTickets.find((ticket) => ticket.termsAndConditions)
+          ?.termsAndConditions ?? null,
+      priceLabel:
+        groupTotal !== null
+          ? `₱${groupTotal.toLocaleString('en-PH', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`
+          : null,
+      imageUrl: order.image || null,
     },
     qrSvg: groupQrRef.current?.querySelector('svg') ?? null,
   })
@@ -367,6 +407,17 @@ export function OrderSuccessPage() {
                     visitDateLabel={visitDateLabel}
                     location={order.location}
                     orderNumber={orderNumber}
+                    holderName={holder}
+                    priceLabel={
+                      ticket.unitPrice !== null
+                        ? `₱${ticket.unitPrice.toLocaleString('en-PH', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        : null
+                    }
+                    posterUrl={order.image || null}
+                    logoUrl={ticketLogoUrl}
                     position={`Ticket ${index + 1} of ${ticketCount}`}
                     qrRef={(element) => {
                       if (element) qrRefs.current.set(ticket.uuid, element)

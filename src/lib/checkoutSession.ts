@@ -3,6 +3,8 @@ const CHECKOUT_SESSION_KEY = 'paec_checkout_session'
 export type CheckoutTicketLine = {
   ticketTypeId: string
   name: string
+  ticketKind?: 'regular' | 'gift_certificate'
+  termsAndConditions?: string | null
   unitPrice: number
   originalUnitPrice?: number
   quantity: number

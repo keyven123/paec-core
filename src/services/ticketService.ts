@@ -22,6 +22,8 @@ export type TicketTransaction = {
 export type EventTicket = {
   uuid: string
   name: string
+  ticket_kind?: 'regular' | 'gift_certificate'
+  terms_and_conditions?: string | null
   code: string
   price: number
   is_virtual?: boolean

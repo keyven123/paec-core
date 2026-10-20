@@ -13,7 +13,9 @@ export type AdminEventTicket = {
   schedule_time_uuid: string | null
   code: string
   name: string
+  ticket_kind: 'regular' | 'gift_certificate'
   description: string | null
+  terms_and_conditions: string | null
   price: string
   discount_type: string | null
   discount_value: string | null

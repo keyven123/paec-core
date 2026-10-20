@@ -4,6 +4,7 @@ import QRCode from 'react-qr-code'
 
 import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 import { resolveImageUrl } from '@/lib/imageUtils'
+import { termsParagraphs } from '@/lib/termsText'
 import { cn } from '@/lib/utils'
 import { formatTicketVenue, type Ticket } from '@/services/ticketService'
 
@@ -176,6 +177,11 @@ export function TicketPassCard({ ticket }: TicketPassCardProps) {
                 <span className="inline-flex rounded-md border border-paec-orange/30 bg-paec-orange/10 px-2 py-0.5 text-[10px] font-bold tracking-wide text-paec-orange uppercase">
                   {tierName}
                 </span>
+                {ticket.event_ticket?.ticket_kind === 'gift_certificate' ? (
+                  <span className="mt-1 ml-1 inline-flex rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-paec-violet uppercase">
+                    Gift Certificate
+                  </span>
+                ) : null}
               </DetailCell>
             </div>
             <div className="grid grid-cols-2 border-b border-violet-100">
@@ -197,6 +203,26 @@ export function TicketPassCard({ ticket }: TicketPassCardProps) {
               </DetailCell>
             </div>
           </div>
+
+          {ticket.event_ticket?.terms_and_conditions ? (
+            <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50/60 px-3 py-2.5">
+              <p className="text-[10px] font-bold tracking-wide text-orange-700 uppercase">
+                Terms and Conditions
+              </p>
+              <div className="mt-1 max-h-44 space-y-1.5 overflow-y-auto pr-1">
+                {termsParagraphs(ticket.event_ticket.terms_and_conditions).map(
+                  (paragraph, index) => (
+                    <p
+                      key={index}
+                      className="text-[11px] leading-[1.6] whitespace-pre-line text-foreground"
+                    >
+                      {paragraph}
+                    </p>
+                  ),
+                )}
+              </div>
+            </div>
+          ) : null}
 
           {isPast && (
             <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-xs font-medium text-paec-violet">

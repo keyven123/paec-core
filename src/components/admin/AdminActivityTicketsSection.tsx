@@ -4,7 +4,9 @@ import {
   Copy,
   Edit,
   Flame,
+  Gift,
   Plus,
+  ScrollText,
   Send,
   Trash2,
   X,
@@ -374,6 +376,18 @@ function TicketCard({
               Bundle
             </span>
           ) : null}
+          {ticket.ticket_kind === 'gift_certificate' ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-paec-orange ring-1 ring-orange-200">
+              <Gift className="size-3" />
+              Gift Certificate
+            </span>
+          ) : null}
+          {ticket.terms_and_conditions ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-paec-violet ring-1 ring-violet-200">
+              <ScrollText className="size-3" />
+              With Terms
+            </span>
+          ) : null}
         </div>
 
         {discount ? (
@@ -403,6 +417,12 @@ function TicketCard({
 
       <dl className="mb-4 space-y-1.5 text-sm">
         {[
+          [
+            'Type',
+            ticket.ticket_kind === 'gift_certificate'
+              ? 'Gift Certificate Ticket'
+              : 'Regular',
+          ],
           ['Sold', String(ticket.sold_ticket)],
           ['Code', ticket.code],
           [

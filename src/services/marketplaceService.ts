@@ -70,6 +70,8 @@ export type PublicPaymentGateway = {
 export type PublicEventTicket = {
   uuid: string
   name: string
+  ticket_kind?: 'regular' | 'gift_certificate'
+  terms_and_conditions?: string | null
   price: string
   discounted_price?: number | string | null
   description?: string
@@ -306,6 +308,11 @@ export function mapPublicEventToAttraction(
       return {
         id: ticket.uuid,
         name: ticket.name,
+        ticketKind:
+          ticket.ticket_kind === 'gift_certificate'
+            ? 'gift_certificate'
+            : 'regular',
+        termsAndConditions: ticket.terms_and_conditions ?? null,
         price: discounted ? finalPrice : listPrice,
         originalPrice: discounted ? listPrice : undefined,
         description: ticket.description,
