@@ -1,4 +1,4 @@
-import { Flame, Minus, Plus } from 'lucide-react'
+import { Flame, Gift, Minus, Plus } from 'lucide-react'
 
 import type { TicketType } from '@/data/mockAttractions'
 import { ThemedSelect } from '@/components/ui/themed-select'
@@ -57,6 +57,12 @@ export function TicketTypeCard({
             <span className="flash-sale-ticket-badge mt-1.5 inline-flex items-center gap-1 rounded-full border border-orange-300/80 bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-0.5 text-[10px] font-black tracking-wide text-white uppercase shadow-sm shadow-orange-500/25">
               <Flame className="size-3 fill-white/30" />
               Flash Sale
+            </span>
+          ) : null}
+          {ticket.ticketKind === 'gift_certificate' ? (
+            <span className="mt-1.5 ml-1 inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-paec-orange uppercase ring-1 ring-orange-200">
+              <Gift className="size-3" />
+              Gift Certificate
             </span>
           ) : null}
           {unavailable ? (

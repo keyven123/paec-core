@@ -8,8 +8,12 @@ const ORDER_CONFIRMATION_KEY = 'paec_order_confirmation'
 
 export type ConfirmedTicket = {
   uuid: string
+  eventTicketUuid: string
   ticketNumber: string
   ticketTypeName: string
+  ticketKind: 'regular' | 'gift_certificate'
+  termsAndConditions: string | null
+  unitPrice: number | null
   qrCode: string | null
   status: string
 }
@@ -31,20 +35,28 @@ export function buildOrderConfirmation(
   response: CheckoutResponse,
   customer: { name: string; email: string; isGuest: boolean },
 ): OrderConfirmation {
-  const tickets = (response.tickets ?? []).map((ticket) => ({
-    uuid: ticket.uuid,
-    ticketNumber:
-      ticket.ticket_number ??
-      `TKT-${ticket.uuid.replace(/-/g, '').slice(0, 12).toUpperCase()}`,
-    ticketTypeName:
-      ticket.event_ticket?.name ??
-      order.tickets.find(
-        (line) => line.ticketTypeId === ticket.event_ticket_uuid,
-      )?.name ??
-      'Admission',
-    qrCode: ticket.qr_code,
-    status: ticket.status,
-  }))
+  const tickets = (response.tickets ?? []).map((ticket) => {
+    const line = order.tickets.find(
+      (item) => item.ticketTypeId === ticket.event_ticket_uuid,
+    )
+    return {
+      uuid: ticket.uuid,
+      eventTicketUuid: ticket.event_ticket_uuid,
+      ticketNumber:
+        ticket.ticket_number ??
+        `TKT-${ticket.uuid.replace(/-/g, '').slice(0, 12).toUpperCase()}`,
+      ticketTypeName: ticket.event_ticket?.name ?? line?.name ?? 'Admission',
+      ticketKind:
+        ticket.event_ticket?.ticket_kind ?? line?.ticketKind ?? 'regular',
+      termsAndConditions:
+        ticket.event_ticket?.terms_and_conditions ??
+        line?.termsAndConditions ??
+        null,
+      unitPrice: line?.unitPrice ?? null,
+      qrCode: ticket.qr_code,
+      status: ticket.status,
+    }
+  })
 
   return {
     orderNumber: response.transaction?.order_number ?? '',

@@ -10,9 +10,32 @@ export type VisitPolicy = (typeof VISIT_POLICY_OPTIONS)[number]['value']
 
 export type CouponFormItem = { uuid?: string; name: string; once_only?: boolean }
 
+export type TicketKind = 'regular' | 'gift_certificate'
+
+export const TICKET_KIND_OPTIONS: Array<{
+  value: TicketKind
+  label: string
+  description: string
+}> = [
+  {
+    value: 'regular',
+    label: 'Regular',
+    description: 'Standard e-ticket pass, downloaded as the usual ticket.',
+  },
+  {
+    value: 'gift_certificate',
+    label: 'Gift Certificate Ticket',
+    description:
+      'Downloaded and emailed as a gift certificate ticket with poster and terms.',
+  },
+]
+
 export type EventTicketFormState = {
   name: string
+  ticket_kind: TicketKind
   description: string
+  with_terms_and_conditions: boolean
+  terms_and_conditions: string
   price: string
   available_from: string
   available_to: string
@@ -46,7 +69,10 @@ export type EventTicketFormState = {
 
 export const emptyEventTicketForm = (): EventTicketFormState => ({
   name: '',
+  ticket_kind: 'regular',
   description: '',
+  with_terms_and_conditions: false,
+  terms_and_conditions: '',
   price: '',
   available_from: '',
   available_to: '',
@@ -105,7 +131,13 @@ export function ticketToForm(
 
   return {
     name: ticket.name,
+    ticket_kind:
+      ticket.ticket_kind === 'gift_certificate'
+        ? 'gift_certificate'
+        : 'regular',
     description: ticket.description ?? '',
+    with_terms_and_conditions: !!ticket.terms_and_conditions?.trim(),
+    terms_and_conditions: ticket.terms_and_conditions ?? '',
     price: ticket.price,
     available_from: formatDateTimeForInput(ticket.available_from),
     available_to: formatDateTimeForInput(ticket.available_to),
@@ -188,6 +220,17 @@ export function validateEventTicketForm(
   }
 
   if (!form.name.trim()) errors.name = 'Name is required'
+  if (
+    form.with_terms_and_conditions &&
+    !form.terms_and_conditions.trim()
+  ) {
+    errors.terms_and_conditions =
+      'Terms and conditions are required when Terms and Conditions is enabled'
+  }
+  if (form.terms_and_conditions.length > 5000) {
+    errors.terms_and_conditions =
+      'Terms and conditions must not exceed 5000 characters'
+  }
   if (!form.price || Number.parseFloat(form.price) < 0) {
     errors.price = 'Valid price is required'
   }
@@ -303,7 +346,12 @@ export function buildCreateTicketPayload(
       ? undefined
       : form.schedule_time_uuid || undefined,
     name: form.name.trim(),
+    ticket_kind: form.ticket_kind,
     description: form.description.trim() || null,
+    with_terms_and_conditions: form.with_terms_and_conditions,
+    terms_and_conditions: form.with_terms_and_conditions
+      ? form.terms_and_conditions.trim()
+      : null,
     price: form.price,
     available_from: formatDateTimeForBackend(form.available_from),
     available_to: formatDateTimeForBackend(form.available_to),
@@ -364,7 +412,12 @@ export function buildUpdateTicketPayload(
 ): Record<string, unknown> {
   return {
     name: form.name.trim(),
+    ticket_kind: form.ticket_kind,
     description: form.description.trim() || null,
+    with_terms_and_conditions: form.with_terms_and_conditions,
+    terms_and_conditions: form.with_terms_and_conditions
+      ? form.terms_and_conditions.trim()
+      : null,
     price: form.price,
     available_from: formatDateTimeForBackend(form.available_from),
     available_to: formatDateTimeForBackend(form.available_to),

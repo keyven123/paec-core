@@ -42,7 +42,12 @@ export type PlacedTicket = {
   ticket_number: string | null
   qr_code: string | null
   status: string
-  event_ticket?: { uuid: string; name: string } | null
+  event_ticket?: {
+    uuid: string
+    name: string
+    ticket_kind?: 'regular' | 'gift_certificate'
+    terms_and_conditions?: string | null
+  } | null
 }
 
 export type CheckoutResponse = {
