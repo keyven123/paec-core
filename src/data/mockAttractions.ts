@@ -1,6 +1,10 @@
 export type TicketType = {
   id: string
   name: string
+  /** regular = standard pass; gift_certificate = gift certificate ticket design. */
+  ticketKind?: 'regular' | 'gift_certificate'
+  /** Printed on the purchased ticket when set by the organizer. */
+  termsAndConditions?: string | null
   /** Unit price the customer pays, after the ticket's own discount. */
   price: number
   /** Price before the ticket discount; set only when the ticket is discounted. */

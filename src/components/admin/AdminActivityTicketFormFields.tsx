@@ -4,8 +4,10 @@ import { createPortal } from 'react-dom'
 
 import {
   isPaecFunActivity,
+  TICKET_KIND_OPTIONS,
   VISIT_POLICY_OPTIONS,
   type EventTicketFormState,
+  type TicketKind,
   type VisitPolicy,
 } from '@/lib/eventTicketForm'
 import { cn } from '@/lib/utils'
@@ -224,6 +226,51 @@ export function AdminActivityTicketFormFields({
           </div>
         </div>
       ) : null}
+
+      <fieldset>
+        <legend className="mb-1 block text-xs font-medium text-foreground">
+          Ticket Type <span className="text-red-500">*</span>
+        </legend>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {TICKET_KIND_OPTIONS.map((option) => {
+            const selected = formData.ticket_kind === option.value
+            return (
+              <label
+                key={option.value}
+                className={cn(
+                  'flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors',
+                  selected
+                    ? 'border-paec-violet bg-violet-50/70 ring-1 ring-paec-violet/30'
+                    : 'border-violet-100 bg-white hover:border-violet-200',
+                )}
+              >
+                <input
+                  type="radio"
+                  name={`${idPrefix}-ticket-kind`}
+                  value={option.value}
+                  checked={selected}
+                  onChange={() =>
+                    setFormData({
+                      ...formData,
+                      ticket_kind: option.value as TicketKind,
+                    })
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-paec-violet"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-foreground">
+                    {option.label}
+                  </span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                    {option.description}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+        <FieldError message={fieldError('ticket_kind')} />
+      </fieldset>
 
       <div>
         <FieldLabel htmlFor={`${idPrefix}-name`} label="Name" required />
@@ -1068,6 +1115,67 @@ export function AdminActivityTicketFormFields({
             Add coupon
           </button>
           <FieldError message={fieldError('coupons')} />
+        </div>
+      ) : null}
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={formData.with_terms_and_conditions}
+          onChange={(event) =>
+            setFormData({
+              ...formData,
+              with_terms_and_conditions: event.target.checked,
+              terms_and_conditions: event.target.checked
+                ? formData.terms_and_conditions
+                : '',
+            })
+          }
+          className="size-4 rounded border-violet-200 accent-paec-violet"
+        />
+        <span className="flex items-center gap-1">
+          Terms and Conditions
+          <InfoTip text="Printed on the ticket the customer downloads and receives by email. For Gift Certificate tickets it appears in the Terms and Conditions panel." />
+        </span>
+      </label>
+
+      {formData.with_terms_and_conditions ? (
+        <div>
+          <FieldLabel
+            htmlFor={`${idPrefix}-terms-and-conditions`}
+            label="Terms and Conditions"
+            required
+          />
+          <textarea
+            id={`${idPrefix}-terms-and-conditions`}
+            rows={5}
+            maxLength={5000}
+            value={formData.terms_and_conditions}
+            onChange={(event) =>
+              setFormData({
+                ...formData,
+                terms_and_conditions: event.target.value,
+              })
+            }
+            placeholder={
+              'e.g. Present the QR code at the entrance for admission.\nTickets are non-transferable unless approved by the organizer.\nLost or duplicated tickets may be voided.'
+            }
+            className={cn(
+              inputClassName,
+              'min-h-28 resize-y py-2 leading-relaxed',
+              fieldError('terms_and_conditions') && inputErrorClassName,
+            )}
+          />
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Shown on the downloaded and emailed ticket. One condition per
+              line works best.
+            </p>
+            <p className="shrink-0 text-xs text-muted-foreground">
+              {formData.terms_and_conditions.length}/5000
+            </p>
+          </div>
+          <FieldError message={fieldError('terms_and_conditions')} />
         </div>
       ) : null}
     </div>

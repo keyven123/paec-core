@@ -107,7 +107,7 @@ export function Footer() {
           <p className="flex items-center gap-2">
             <span className="text-white">Powered by</span>
             <a
-              href="https://business.ticketoc.com/"
+              href="https://business.ticketoc.com/?source=paec"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Visit Ticketoc"
