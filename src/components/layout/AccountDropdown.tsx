@@ -1,5 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, LogOut, ShoppingCart, Ticket, User } from 'lucide-react'
+import {
+  BriefcaseBusiness,
+  ChevronDown,
+  LogOut,
+  ShoppingCart,
+  Ticket,
+  User,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { User as AccountUser } from '@/data/mockUser'
@@ -13,6 +20,7 @@ type AccountDropdownProps = {
 
 const menuItems = [
   { label: 'My Tickets', section: 'tickets' as const, icon: Ticket },
+  { label: 'My Applications', section: 'applications' as const, icon: BriefcaseBusiness },
   { label: 'Profile', section: 'profile' as const, icon: User },
 ]
 

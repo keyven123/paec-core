@@ -1,6 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   BarChart3,
+  BriefcaseBusiness,
   Building2,
   Calendar,
   CreditCard,
@@ -35,6 +36,7 @@ const navItems = [
   { to: '/admin/usermanagement', label: 'User Management', icon: Users },
   { to: '/admin/intelligence', label: 'Intelligence', icon: BarChart3 },
   { to: '/admin/cms', label: 'Content Management', icon: FileText },
+  { to: '/admin/careers', label: 'Careers', icon: BriefcaseBusiness },
 ] as const
 
 export function AdminSidebar({
@@ -87,7 +89,8 @@ export function AdminSidebar({
               pathname.startsWith('/admin/usermanagement')) ||
             (item.to === '/admin/intelligence' &&
               pathname.startsWith('/admin/intelligence')) ||
-            (item.to === '/admin/cms' && pathname.startsWith('/admin/cms'))
+            (item.to === '/admin/cms' && pathname.startsWith('/admin/cms')) ||
+            (item.to === '/admin/careers' && pathname.startsWith('/admin/careers'))
 
           return (
             <Link
