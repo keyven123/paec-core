@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  BriefcaseBusiness,
   LogOut,
   Star,
   Tag,
@@ -14,6 +15,7 @@ export type AccountSection =
   | 'tickets'
   | 'coupons'
   | 'transactions'
+  | 'applications'
   | 'profile'
 
 type AccountSidebarProps = {
@@ -37,6 +39,12 @@ const navItems: {
     label: 'Transactions',
     shortLabel: 'Transactions',
     icon: ArrowLeftRight,
+  },
+  {
+    id: 'applications',
+    label: 'My Applications',
+    shortLabel: 'Applications',
+    icon: BriefcaseBusiness,
   },
   { id: 'profile', label: 'Profile', shortLabel: 'Profile', icon: User },
 ]
@@ -76,7 +84,7 @@ function MobileAccountNav({
         </button>
       </div>
 
-      <nav className="grid grid-cols-4 gap-1 p-1.5" aria-label="Account sections">
+      <nav className="grid grid-cols-5 gap-1 p-1.5" aria-label="Account sections">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id
