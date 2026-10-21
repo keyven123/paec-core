@@ -34,8 +34,27 @@ function FooterLinkItem({ link }: { link: CmsFooterLink }) {
   )
 }
 
+const requiredSupportLinks: CmsFooterLink[] = [
+  { label: 'About Us', href: '/pages/about-us' },
+  { label: 'Careers', href: '/careers' },
+]
+
+function withRequiredSupportLinks(links: CmsFooterLink[]): CmsFooterLink[] {
+  const merged = [...requiredSupportLinks]
+  for (const link of links) {
+    const exists = merged.some(
+      (item) =>
+        item.href === link.href ||
+        item.label.toLowerCase() === link.label.toLowerCase(),
+    )
+    if (!exists) merged.push(link)
+  }
+  return merged
+}
+
 export function Footer() {
   const settings = useSiteContact()
+  const supportLinks = withRequiredSupportLinks(settings.support_links)
 
   return (
     <footer className="bg-[#0b1120] text-white">
@@ -55,7 +74,7 @@ export function Footer() {
           <div>
             <h3 className="mb-4 text-sm font-semibold">Support</h3>
             <ul className="space-y-2.5">
-              {settings.support_links.map((link) => (
+              {supportLinks.map((link) => (
                 <li key={`${link.label}-${link.href}`}>
                   <FooterLinkItem link={link} />
                 </li>

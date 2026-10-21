@@ -61,6 +61,8 @@ export const DEFAULT_FOOTER_SETTINGS: CmsFooterSettings = {
     { label: 'Eats', href: '#' },
   ],
   support_links: [
+    { label: 'About Us', href: '/pages/about-us' },
+    { label: 'Careers', href: '/careers' },
     { label: 'Help Center', href: '/pages/help-center' },
     { label: 'Terms of Service', href: '/pages/terms-of-service' },
     { label: 'Privacy Policy', href: '/pages/privacy-policy' },

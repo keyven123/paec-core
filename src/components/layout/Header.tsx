@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Info } from 'lucide-react'
+import { BriefcaseBusiness } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { SignInModal } from '@/components/auth/SignInModal'
@@ -44,13 +44,12 @@ export function Header() {
 
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 md:ml-0">
               <Link
-                to="/pages/$slug"
-                params={{ slug: 'about-us' }}
-                aria-label="About Us"
+                to="/careers"
+                aria-label="Careers"
                 className="flex size-10 items-center justify-center gap-1.5 rounded-full border border-violet-100 bg-violet-50/50 text-sm font-medium text-foreground transition-colors hover:bg-violet-50 md:size-auto md:border-transparent md:bg-transparent md:px-3 md:py-2"
               >
-                <Info className="size-4 text-paec-violet" />
-                <span className="hidden md:inline">About Us</span>
+                <BriefcaseBusiness className="size-4 text-paec-violet" />
+                <span className="hidden md:inline">Careers</span>
               </Link>
 
               {user ? (

@@ -15,6 +15,8 @@ import { AdminActivityDetailPage } from './routes/admin/AdminActivityDetailPage'
 import { AdminActivityScannerPage } from './routes/admin/AdminActivityScannerPage'
 import { AdminActivityCalendarPage } from './routes/admin/AdminActivityCalendarPage'
 import { AdminActivityTicketsPage } from './routes/admin/AdminActivityTicketsPage'
+import { AdminCareerDetailPage } from './routes/admin/AdminCareerDetailPage'
+import { AdminCareersPage } from './routes/admin/AdminCareersPage'
 import { AdminCmsPage } from './routes/admin/AdminCmsPage'
 import { AdminCreateActivityPage } from './routes/admin/AdminCreateActivityPage'
 import { AdminEditActivityPage } from './routes/admin/AdminEditActivityPage'
@@ -33,6 +35,8 @@ import { AdminVenueFormPage } from './routes/admin/AdminVenueFormPage'
 import { AdminVenueInquiriesPage } from './routes/admin/AdminVenueInquiriesPage'
 import { AdminLoginPage } from './routes/AdminLoginPage'
 import { AttractionDetailPage } from './routes/AttractionDetailPage'
+import { CareerDetailPage } from './routes/CareerDetailPage'
+import { CareersPage } from './routes/CareersPage'
 import { CheckoutPage } from './routes/CheckoutPage'
 import { FeaturedActivitiesPage } from './routes/FeaturedActivitiesPage'
 import { FlashSalesPage } from './routes/FlashSalesPage'
@@ -51,6 +55,7 @@ const accountSections: Array<AccountSection> = [
   'tickets',
   'coupons',
   'transactions',
+  'applications',
   'profile',
 ]
 
@@ -98,6 +103,18 @@ const infoPageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/pages/$slug',
   component: InfoPage,
+})
+
+const careersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/careers',
+  component: CareersPage,
+})
+
+const careerDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/careers/$positionId',
+  component: CareerDetailPage,
 })
 
 const checkoutRoute = createRoute({
@@ -256,6 +273,18 @@ const adminCmsRoute = createRoute({
   component: AdminCmsPage,
 })
 
+const adminCareersRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/careers',
+  component: AdminCareersPage,
+})
+
+const adminCareerDetailRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/careers/$positionId',
+  component: AdminCareerDetailPage,
+})
+
 const adminIntelligenceRoute = createRoute({
   getParentRoute: () => adminLayoutRoute,
   path: '/admin/intelligence',
@@ -278,6 +307,8 @@ const routeTree = rootRoute.addChildren([
   featuredRoute,
   flashSalesRoute,
   infoPageRoute,
+  careersRoute,
+  careerDetailRoute,
   checkoutRoute,
   checkoutSuccessRoute,
   paymentSuccessRoute,
@@ -305,6 +336,8 @@ const routeTree = rootRoute.addChildren([
     adminUserStatsRoute,
     adminIntelligenceRoute,
     adminCmsRoute,
+    adminCareersRoute,
+    adminCareerDetailRoute,
   ]),
   accountRoute,
 ])

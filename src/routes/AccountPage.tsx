@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { AccountPlaceholderSection } from '@/components/account/AccountPlaceholderSection'
 import { AccountSidebar } from '@/components/account/AccountSidebar'
+import { MyApplicationsSection } from '@/components/account/MyApplicationsSection'
 import { MyTransactionsSection } from '@/components/account/MyTransactionsSection'
 import { MyTicketsSection } from '@/components/account/MyTicketsSection'
 import { ProfileSection } from '@/components/account/ProfileSection'
@@ -70,6 +71,7 @@ export function AccountPage() {
               />
             )}
             {section === 'transactions' && <MyTransactionsSection />}
+            {section === 'applications' && <MyApplicationsSection />}
             {section === 'profile' && <ProfileSection user={user} />}
           </section>
         </div>
