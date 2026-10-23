@@ -14,6 +14,7 @@ export type AdminEventTicket = {
   code: string
   name: string
   ticket_kind: 'regular' | 'gift_certificate'
+  is_sponsor: boolean
   description: string | null
   terms_and_conditions: string | null
   price: string

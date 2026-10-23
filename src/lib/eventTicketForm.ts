@@ -33,6 +33,7 @@ export const TICKET_KIND_OPTIONS: Array<{
 export type EventTicketFormState = {
   name: string
   ticket_kind: TicketKind
+  is_sponsor: boolean
   description: string
   with_terms_and_conditions: boolean
   terms_and_conditions: string
@@ -70,6 +71,7 @@ export type EventTicketFormState = {
 export const emptyEventTicketForm = (): EventTicketFormState => ({
   name: '',
   ticket_kind: 'regular',
+  is_sponsor: false,
   description: '',
   with_terms_and_conditions: false,
   terms_and_conditions: '',
@@ -135,6 +137,7 @@ export function ticketToForm(
       ticket.ticket_kind === 'gift_certificate'
         ? 'gift_certificate'
         : 'regular',
+    is_sponsor: !!ticket.is_sponsor,
     description: ticket.description ?? '',
     with_terms_and_conditions: !!ticket.terms_and_conditions?.trim(),
     terms_and_conditions: ticket.terms_and_conditions ?? '',
@@ -347,6 +350,7 @@ export function buildCreateTicketPayload(
       : form.schedule_time_uuid || undefined,
     name: form.name.trim(),
     ticket_kind: form.ticket_kind,
+    is_sponsor: form.is_sponsor,
     description: form.description.trim() || null,
     with_terms_and_conditions: form.with_terms_and_conditions,
     terms_and_conditions: form.with_terms_and_conditions
@@ -413,6 +417,7 @@ export function buildUpdateTicketPayload(
   return {
     name: form.name.trim(),
     ticket_kind: form.ticket_kind,
+    is_sponsor: form.is_sponsor,
     description: form.description.trim() || null,
     with_terms_and_conditions: form.with_terms_and_conditions,
     terms_and_conditions: form.with_terms_and_conditions

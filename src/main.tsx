@@ -42,6 +42,7 @@ import { FeaturedActivitiesPage } from './routes/FeaturedActivitiesPage'
 import { FlashSalesPage } from './routes/FlashSalesPage'
 import { HomePage } from './routes/HomePage'
 import { InfoPage } from './routes/InfoPage'
+import { NotFoundRedirect } from './routes/NotFoundRedirect'
 import { OrderSuccessPage } from './routes/OrderSuccessPage'
 import {
   PaymentCancelReturnPage,
@@ -67,6 +68,7 @@ function parseAccountSection(value: unknown): AccountSection {
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
+  notFoundComponent: () => <NotFoundRedirect />,
 })
 
 const indexRoute = createRoute({
@@ -285,6 +287,14 @@ const adminCareerDetailRoute = createRoute({
   component: AdminCareerDetailPage,
 })
 
+// Catch-all for unknown /admin/* URLs: send them to the admin dashboard
+// instead of showing a blank/plain "Not Found".
+const adminNotFoundRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/$',
+  component: () => <NotFoundRedirect />,
+})
+
 const adminIntelligenceRoute = createRoute({
   getParentRoute: () => adminLayoutRoute,
   path: '/admin/intelligence',
@@ -338,11 +348,15 @@ const routeTree = rootRoute.addChildren([
     adminCmsRoute,
     adminCareersRoute,
     adminCareerDetailRoute,
+    adminNotFoundRoute,
   ]),
   accountRoute,
 ])
 
-const router = createRouter({ routeTree })
+const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: () => <NotFoundRedirect />,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {
