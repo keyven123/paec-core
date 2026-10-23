@@ -382,6 +382,12 @@ function TicketCard({
               Gift Certificate
             </span>
           ) : null}
+          {ticket.is_sponsor ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-paec-orange ring-1 ring-orange-200">
+              <Send className="size-3" />
+              Sponsor
+            </span>
+          ) : null}
           {ticket.terms_and_conditions ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-paec-violet ring-1 ring-violet-200">
               <ScrollText className="size-3" />
@@ -465,14 +471,16 @@ function TicketCard({
       </dl>
 
       <div className="mt-auto space-y-2 border-t border-violet-50 pt-4">
-        <button
-          type="button"
-          onClick={onSendSponsor}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-paec-orange/40 bg-orange-50 px-3 py-2 text-xs font-semibold text-paec-orange hover:bg-orange-100"
-        >
-          <Send className="size-3.5" />
-          Send Sponsor
-        </button>
+        {ticket.is_sponsor ? (
+          <button
+            type="button"
+            onClick={onSendSponsor}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-paec-orange/40 bg-orange-50 px-3 py-2 text-xs font-semibold text-paec-orange hover:bg-orange-100"
+          >
+            <Send className="size-3.5" />
+            Send Sponsor
+          </button>
+        ) : null}
         <div className="flex gap-2">
           <button
             type="button"

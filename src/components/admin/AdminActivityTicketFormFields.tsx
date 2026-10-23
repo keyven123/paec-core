@@ -1,4 +1,4 @@
-import { Info, Plus, X } from 'lucide-react'
+import { Info, Plus, Send, X } from 'lucide-react'
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -769,6 +769,35 @@ export function AdminActivityTicketFormFields({
         ) : null}
       </div>
 
+      <div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={formData.is_sponsor}
+            onChange={(event) =>
+              setFormData({ ...formData, is_sponsor: event.target.checked })
+            }
+            className="size-4 rounded border-violet-200 accent-paec-violet"
+          />
+          <span className="flex items-center gap-1">
+            Sponsor
+            <InfoTip text="Marks this as a sponsor ticket. The Send Sponsor button appears on this ticket in Manage Tickets, and complimentary sponsor e-tickets can be emailed from there." />
+          </span>
+        </label>
+        {formData.is_sponsor ? (
+          <div className="mt-3 flex gap-2.5 rounded-xl border border-orange-200 bg-orange-50 p-3.5 text-xs leading-relaxed text-orange-900 sm:text-sm">
+            <Send className="mt-0.5 size-4 shrink-0 text-paec-orange" />
+            <p>
+              Sponsor sending is enabled for this ticket. To customize the{' '}
+              <strong>Terms and Conditions</strong> printed on the sponsor
+              e-ticket design, tick <strong>Terms and Conditions</strong>{' '}
+              below and write your text — it replaces the default sponsor
+              terms. Leave it unticked to use the standard sponsor wording.
+            </p>
+          </div>
+        ) : null}
+      </div>
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -1135,7 +1164,7 @@ export function AdminActivityTicketFormFields({
         />
         <span className="flex items-center gap-1">
           Terms and Conditions
-          <InfoTip text="Printed on the ticket the customer downloads and receives by email. For Gift Certificate tickets it appears in the Terms and Conditions panel." />
+          <InfoTip text="Printed on the ticket the customer downloads and receives by email. For Gift Certificate tickets it appears in the Terms and Conditions panel. For Sponsor tickets, this text replaces the default terms on the sponsor e-ticket design." />
         </span>
       </label>
 
@@ -1168,8 +1197,9 @@ export function AdminActivityTicketFormFields({
           />
           <div className="mt-1 flex items-start justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Shown on the downloaded and emailed ticket. One condition per
-              line works best.
+              Shown on the downloaded and emailed ticket — including the
+              sponsor e-ticket design when Sponsor is enabled. One condition
+              per line works best.
             </p>
             <p className="shrink-0 text-xs text-muted-foreground">
               {formData.terms_and_conditions.length}/5000
