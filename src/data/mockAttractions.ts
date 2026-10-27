@@ -27,6 +27,10 @@ export type TicketType = {
   > | null
   operationHoursFrom?: string | null
   operationHoursTo?: string | null
+  /** Length of each purchase visit window in minutes (e.g. 180 = 3 hours). */
+  timeslotDurationMinutes?: number | null
+  /** How often a new slot starts (e.g. 60 = hourly). */
+  timeslotIntervalMinutes?: number | null
 }
 
 export type AttractionLocation = {

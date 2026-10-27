@@ -462,6 +462,15 @@ function TicketCard({
               ? `${(ticket.operation_hours_from ?? '—').toString().slice(0, 5)} – ${(ticket.operation_hours_to ?? '—').toString().slice(0, 5)}`
               : '—',
           ],
+          [
+            'Timeslot',
+            ticket.timeslot_duration_minutes &&
+            ticket.timeslot_duration_minutes > 0
+              ? `${ticket.timeslot_duration_minutes} min every ${
+                  ticket.timeslot_interval_minutes ?? 60
+                } min`
+              : '—',
+          ],
         ].map(([label, value]) => (
           <div key={label} className="flex justify-between gap-3">
             <dt className="text-muted-foreground">{label}</dt>

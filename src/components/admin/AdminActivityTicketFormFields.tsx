@@ -10,6 +10,7 @@ import {
   type TicketKind,
   type VisitPolicy,
 } from '@/lib/eventTicketForm'
+import { buildTimeslotRanges } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import type { AdminEvent } from '@/services/adminEventService'
 
@@ -821,6 +822,9 @@ export function AdminActivityTicketFormFields({
                     ] as const,
                     operation_hours_from: '',
                     operation_hours_to: '',
+                    with_timeslot: false,
+                    timeslot_duration_minutes: '180',
+                    timeslot_interval_minutes: '60',
                   }),
             })
           }
@@ -828,7 +832,7 @@ export function AdminActivityTicketFormFields({
         />
         <span className="flex items-center gap-1">
           Operations
-          <InfoTip text="Limit this ticket to specific days of the week, and set operation hours so customers can pick a visit time." />
+          <InfoTip text="Limit this ticket to specific days of the week, set operation hours, and optionally define Timeslots (e.g. 180-minute windows like 4PM–7PM)." />
         </span>
       </label>
 
@@ -971,6 +975,150 @@ export function AdminActivityTicketFormFields({
             <p className="mt-1 text-xs text-muted-foreground">
               When set, customers choose a visit time within this window.
             </p>
+          </div>
+
+          <div className="sm:col-span-2 border-t border-violet-100 pt-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.with_timeslot}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    with_timeslot: event.target.checked,
+                    timeslot_duration_minutes: event.target.checked
+                      ? formData.timeslot_duration_minutes || '180'
+                      : formData.timeslot_duration_minutes,
+                    timeslot_interval_minutes: event.target.checked
+                      ? formData.timeslot_interval_minutes || '60'
+                      : formData.timeslot_interval_minutes,
+                  })
+                }
+                className="size-4 rounded border-violet-200 accent-paec-violet"
+              />
+              <span className="flex items-center gap-1">
+                Timeslot
+                <InfoTip text="Defines how long each purchase visit lasts. Example: 180 minutes (3 hours) with operation hours 4:00 PM–10:00 PM become 4–7PM, 5–8PM, 6–9PM, 7–10PM." />
+              </span>
+            </label>
+
+            {formData.with_timeslot ? (
+              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <FieldLabel
+                    htmlFor={`${idPrefix}-timeslot-duration`}
+                    label="Timeslot duration (minutes)"
+                    required
+                  />
+                  <input
+                    id={`${idPrefix}-timeslot-duration`}
+                    type="number"
+                    min="15"
+                    max="720"
+                    step="15"
+                    value={formData.timeslot_duration_minutes}
+                    onChange={(event) =>
+                      setFormData({
+                        ...formData,
+                        timeslot_duration_minutes: event.target.value,
+                      })
+                    }
+                    placeholder="180"
+                    className={cn(
+                      inputClassName,
+                      fieldError('timeslot_duration_minutes') &&
+                        inputErrorClassName,
+                    )}
+                  />
+                  <FieldError message={fieldError('timeslot_duration_minutes')} />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    How long each booked visit lasts (e.g. 180 = 3 hours, 30 =
+                    30 minutes).
+                  </p>
+                </div>
+                <div>
+                  <FieldLabel
+                    htmlFor={`${idPrefix}-timeslot-interval`}
+                    label="Starts every (minutes)"
+                    required
+                  />
+                  <input
+                    id={`${idPrefix}-timeslot-interval`}
+                    type="number"
+                    min="15"
+                    max="720"
+                    step="15"
+                    value={formData.timeslot_interval_minutes}
+                    onChange={(event) =>
+                      setFormData({
+                        ...formData,
+                        timeslot_interval_minutes: event.target.value,
+                      })
+                    }
+                    placeholder="60"
+                    className={cn(
+                      inputClassName,
+                      fieldError('timeslot_interval_minutes') &&
+                        inputErrorClassName,
+                    )}
+                  />
+                  <FieldError message={fieldError('timeslot_interval_minutes')} />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    How often a new slot starts (e.g. 60 = every hour, 30 =
+                    every 30 minutes).
+                  </p>
+                </div>
+                {formData.operation_hours_from &&
+                formData.operation_hours_to &&
+                Number.parseInt(formData.timeslot_duration_minutes, 10) > 0 ? (
+                  <div className="sm:col-span-2">
+                    <p className="mb-2 text-xs font-medium text-foreground">
+                      Preview timeslots
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(() => {
+                        const durationMins = Number.parseInt(
+                          formData.timeslot_duration_minutes,
+                          10,
+                        )
+                        const intervalMins = Number.parseInt(
+                          formData.timeslot_interval_minutes || '60',
+                          10,
+                        )
+                        const ranges =
+                          Number.isFinite(durationMins) && durationMins > 0
+                            ? buildTimeslotRanges(
+                                formData.operation_hours_from,
+                                formData.operation_hours_to,
+                                durationMins,
+                                Number.isFinite(intervalMins) &&
+                                  intervalMins > 0
+                                  ? intervalMins
+                                  : 60,
+                              )
+                            : []
+                        if (ranges.length === 0) {
+                          return (
+                            <p className="text-xs text-rose-600">
+                              No timeslots fit inside these operation hours.
+                              Widen the hours or shorten the duration.
+                            </p>
+                          )
+                        }
+                        return ranges.map((range) => (
+                          <span
+                            key={range.value}
+                            className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-paec-violet"
+                          >
+                            {range.label}
+                          </span>
+                        ))
+                      })()}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

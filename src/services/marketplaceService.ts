@@ -84,6 +84,8 @@ export type PublicEventTicket = {
   operation_custom_days?: Array<string> | null
   operation_hours_from?: string | null
   operation_hours_to?: string | null
+  timeslot_duration_minutes?: number | null
+  timeslot_interval_minutes?: number | null
 }
 
 export type BrowseByCityLocation = {
@@ -340,6 +342,8 @@ export function mapPublicEventToAttraction(
         operationHoursTo: ticket.operation_hours_to
           ? String(ticket.operation_hours_to).slice(0, 5)
           : null,
+        timeslotDurationMinutes: ticket.timeslot_duration_minutes ?? null,
+        timeslotIntervalMinutes: ticket.timeslot_interval_minutes ?? null,
       }
     }),
     todayCutoffTime: event.today_cutoff_time ?? null,
