@@ -2,6 +2,7 @@ import { Flame, Gift, Minus, Plus } from 'lucide-react'
 
 import type { TicketType } from '@/data/mockAttractions'
 import { ThemedSelect } from '@/components/ui/themed-select'
+import type { VisitTimeOption } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 
 type TicketTypeCardProps = {
@@ -10,7 +11,7 @@ type TicketTypeCardProps = {
   unavailable?: boolean
   unavailableReason?: string | null
   visitTime?: string
-  visitTimeSlots?: Array<string>
+  visitTimeSlots?: Array<VisitTimeOption>
   onVisitTimeChange?: (value: string) => void
   onDecrease: () => void
   onIncrease: () => void
@@ -106,10 +107,10 @@ export function TicketTypeCard({
             label="Visit time"
             value={visitTime}
             onChange={onVisitTimeChange}
-            placeholder="Select time"
+            placeholder="Select timeslot"
             options={visitTimeSlots.map((slot) => ({
-              value: slot,
-              label: slot,
+              value: slot.value,
+              label: slot.label,
             }))}
           />
         </div>

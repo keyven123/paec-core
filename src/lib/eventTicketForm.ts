@@ -1,5 +1,6 @@
 import type { AdminEvent } from '@/services/adminEventService'
 import type { AdminEventTicket } from '@/services/adminEventTicketService'
+import { buildTimeslotRanges } from '@/lib/visitDate'
 
 export const VISIT_POLICY_OPTIONS = [
   { value: 'priority', label: 'Priority Ticket' },
@@ -55,6 +56,11 @@ export type EventTicketFormState = {
   >
   operation_hours_from: string
   operation_hours_to: string
+  with_timeslot: boolean
+  /** Minutes — stored as timeslot_duration_minutes on save (e.g. 180 = 3 hours). */
+  timeslot_duration_minutes: string
+  /** Minutes between slot starts — stored as timeslot_interval_minutes on save (e.g. 60 = every hour). */
+  timeslot_interval_minutes: string
   with_discount: boolean
   discount_type: string
   discount_value: string
@@ -91,6 +97,9 @@ export const emptyEventTicketForm = (): EventTicketFormState => ({
   operation_custom_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
   operation_hours_from: '',
   operation_hours_to: '',
+  with_timeslot: false,
+  timeslot_duration_minutes: '180',
+  timeslot_interval_minutes: '60',
   with_discount: false,
   discount_type: '',
   discount_value: '',
@@ -155,7 +164,8 @@ export function ticketToForm(
     with_operations:
       (!!ticket.operation_days && ticket.operation_days !== 'any') ||
       !!ticket.operation_hours_from ||
-      !!ticket.operation_hours_to,
+      !!ticket.operation_hours_to ||
+      !!(ticket.timeslot_duration_minutes && ticket.timeslot_duration_minutes > 0),
     operation_days:
       ticket.operation_days === 'weekdays' ||
       ticket.operation_days === 'weekends' ||
@@ -169,6 +179,15 @@ export function ticketToForm(
       : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     operation_hours_from: (ticket.operation_hours_from ?? '').slice(0, 5),
     operation_hours_to: (ticket.operation_hours_to ?? '').slice(0, 5),
+    with_timeslot: !!(
+      ticket.timeslot_duration_minutes && ticket.timeslot_duration_minutes > 0
+    ),
+    timeslot_duration_minutes: ticket.timeslot_duration_minutes
+      ? String(ticket.timeslot_duration_minutes)
+      : '180',
+    timeslot_interval_minutes: ticket.timeslot_interval_minutes
+      ? String(ticket.timeslot_interval_minutes)
+      : '60',
     with_discount: hasDiscount,
     discount_type: ticket.discount_type ?? '',
     discount_value: ticket.discount_value ?? '',
@@ -253,6 +272,47 @@ export function validateEventTicketForm(
     ) {
       errors.operation_hours_to =
         'Operation hours end must be after or equal to start'
+    }
+    if (form.with_timeslot) {
+      if (!form.operation_hours_from || !form.operation_hours_to) {
+        errors.timeslot_duration_minutes =
+          'Set operation hours from and to before enabling Timeslot'
+      }
+      const durationMinutes = Number.parseInt(form.timeslot_duration_minutes, 10)
+      const intervalMinutes = Number.parseInt(form.timeslot_interval_minutes, 10)
+      if (!Number.isFinite(durationMinutes) || durationMinutes < 15) {
+        errors.timeslot_duration_minutes =
+          'Timeslot duration must be at least 15 minutes'
+      } else if (durationMinutes > 720) {
+        errors.timeslot_duration_minutes =
+          'Timeslot duration must not exceed 720 minutes (12 hours)'
+      }
+      if (!Number.isFinite(intervalMinutes) || intervalMinutes < 15) {
+        errors.timeslot_interval_minutes =
+          'Timeslot interval must be at least 15 minutes'
+      } else if (intervalMinutes > 720) {
+        errors.timeslot_interval_minutes =
+          'Timeslot interval must not exceed 720 minutes'
+      }
+      if (
+        form.operation_hours_from &&
+        form.operation_hours_to &&
+        Number.isFinite(durationMinutes) &&
+        durationMinutes >= 15
+      ) {
+        const preview = buildTimeslotRanges(
+          form.operation_hours_from,
+          form.operation_hours_to,
+          durationMinutes,
+          Number.isFinite(intervalMinutes) && intervalMinutes >= 15
+            ? intervalMinutes
+            : 60,
+        )
+        if (preview.length === 0) {
+          errors.timeslot_duration_minutes =
+            'Timeslot duration must fit inside the operation hours window'
+        }
+      }
     }
   }
 
@@ -387,6 +447,14 @@ export function buildCreateTicketPayload(
       form.with_operations && form.operation_hours_to
         ? form.operation_hours_to
         : null,
+    timeslot_duration_minutes:
+      form.with_operations && form.with_timeslot
+        ? Number.parseInt(form.timeslot_duration_minutes, 10)
+        : null,
+    timeslot_interval_minutes:
+      form.with_operations && form.with_timeslot
+        ? Number.parseInt(form.timeslot_interval_minutes, 10)
+        : null,
     discount_type: form.with_discount ? form.discount_type : null,
     discount_value: form.with_discount ? form.discount_value : null,
     is_unlimited: form.is_unlimited,
@@ -452,6 +520,14 @@ export function buildUpdateTicketPayload(
     operation_hours_to:
       form.with_operations && form.operation_hours_to
         ? form.operation_hours_to
+        : null,
+    timeslot_duration_minutes:
+      form.with_operations && form.with_timeslot
+        ? Number.parseInt(form.timeslot_duration_minutes, 10)
+        : null,
+    timeslot_interval_minutes:
+      form.with_operations && form.with_timeslot
+        ? Number.parseInt(form.timeslot_interval_minutes, 10)
         : null,
     discount_type: form.with_discount ? form.discount_type : null,
     discount_value: form.with_discount ? form.discount_value : null,

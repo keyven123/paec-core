@@ -16,13 +16,14 @@ import { useStoredUser } from '@/lib/useStoredUser'
 import { getPromoDiscountAmount } from '@/lib/promoUtils'
 import {
   allowsOperationDay,
-  buildOperationTimeSlots,
+  buildVisitTimeOptions,
   isTicketAvailableForBooking,
   isTicketCurrentlyOnSale,
   isVisitDateBookable,
   operationDayUnavailableBadge,
   operationDayUnavailableMessage,
   ticketHasOperationHours,
+  type VisitTimeOption,
 } from '@/lib/visitDate'
 import { cn } from '@/lib/utils'
 import { blockedDateService } from '@/services/blockedDateService'
@@ -133,13 +134,10 @@ export function BookingSidebar({
     ticketHasOperationHours(ticket),
   )
   const ticketTimeSlots = useMemo(() => {
-    const slots: Record<string, Array<string>> = {}
+    const slots: Record<string, Array<VisitTimeOption>> = {}
     for (const ticket of attraction.ticketTypes) {
       if (!ticketHasOperationHours(ticket)) continue
-      slots[ticket.id] = buildOperationTimeSlots(
-        ticket.operationHoursFrom?.slice(0, 5) ?? '00:00',
-        ticket.operationHoursTo?.slice(0, 5) ?? '23:30',
-      )
+      slots[ticket.id] = buildVisitTimeOptions(ticket)
     }
     return slots
   }, [attraction.ticketTypes])
@@ -235,7 +233,7 @@ export function BookingSidebar({
           )
           return
         }
-        if (!slots.includes(visitTime)) {
+        if (!slots.some((slot) => slot.value === visitTime)) {
           toast.error(`Please select a valid visit time for ${ticket.name}`)
           return
         }

@@ -40,6 +40,10 @@ export type AdminEventTicket = {
   operation_custom_days?: Array<string> | null
   operation_hours_from?: string | null
   operation_hours_to?: string | null
+  /** Length of each purchase visit window in minutes (e.g. 180 = 3 hours). */
+  timeslot_duration_minutes?: number | null
+  /** How often a new slot starts within operation hours (e.g. 60 = hourly). */
+  timeslot_interval_minutes?: number | null
   ticket_limit_per_user: number | null
   with_coupon?: boolean
   coupons?: EventTicketCoupon[]

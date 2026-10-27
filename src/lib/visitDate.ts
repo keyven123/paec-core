@@ -92,6 +92,8 @@ type TicketAvailabilityWindow = {
   operationCustomDays?: Array<OperationDayKey> | null
   operationHoursFrom?: string | null
   operationHoursTo?: string | null
+  timeslotDurationMinutes?: number | null
+  timeslotIntervalMinutes?: number | null
 }
 
 function getManilaDateTimeString(date = new Date()): string {
@@ -275,13 +277,112 @@ export function buildOperationTimeSlots(
   return slots
 }
 
+export type TimeslotRange = {
+  /** Slot start HH:mm — stored as visit_time. */
+  value: string
+  /** Display label, e.g. "4:00 PM – 7:00 PM". */
+  label: string
+  end: string
+}
+
+function formatClockLabel(hhmm: string): string {
+  const [hours, minutes] = hhmm.slice(0, 5).split(':').map(Number)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return hhmm
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+/**
+ * Duration-based visit windows inside operation hours.
+ * Example: 16:00–22:00, duration 180, interval 60 →
+ * 4:00 PM – 7:00 PM, 5:00 PM – 8:00 PM, …, 7:00 PM – 10:00 PM.
+ */
+export function buildTimeslotRanges(
+  from: string | null | undefined,
+  to: string | null | undefined,
+  durationMinutes: number,
+  intervalMinutes = 60,
+): Array<TimeslotRange> {
+  if (!durationMinutes || durationMinutes <= 0) return []
+  const start = (from ?? '09:00').slice(0, 5)
+  const end = (to ?? '17:00').slice(0, 5)
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let mins = sh * 60 + sm
+  const endMins = eh * 60 + em
+  const step = Math.max(1, intervalMinutes || 60)
+  if (!Number.isFinite(mins) || !Number.isFinite(endMins) || endMins < mins) {
+    return []
+  }
+
+  const ranges: Array<TimeslotRange> = []
+  while (mins + durationMinutes <= endMins) {
+    const startLabel = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+    const endTotal = mins + durationMinutes
+    const endLabel = `${String(Math.floor(endTotal / 60) % 24).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`
+    ranges.push({
+      value: startLabel,
+      end: endLabel,
+      label: `${formatClockLabel(startLabel)} – ${formatClockLabel(endLabel)}`,
+    })
+    mins += step
+  }
+  return ranges
+}
+
+export type VisitTimeOption = { value: string; label: string }
+
+/** Visit-time options for a ticket: timeslot ranges when configured, else 30-min points. */
+export function buildVisitTimeOptions(
+  ticket: TicketAvailabilityWindow & {
+    timeslotDurationMinutes?: number | null
+    timeslotIntervalMinutes?: number | null
+  },
+): Array<VisitTimeOption> {
+  if (!ticketHasOperationHours(ticket)) return []
+
+  const duration = ticket.timeslotDurationMinutes ?? 0
+  if (duration > 0) {
+    return buildTimeslotRanges(
+      ticket.operationHoursFrom,
+      ticket.operationHoursTo,
+      duration,
+      ticket.timeslotIntervalMinutes ?? 60,
+    ).map((range) => ({ value: range.value, label: range.label }))
+  }
+
+  return buildOperationTimeSlots(
+    ticket.operationHoursFrom?.slice(0, 5) ?? '00:00',
+    ticket.operationHoursTo?.slice(0, 5) ?? '23:30',
+  ).map((slot) => ({ value: slot, label: slot }))
+}
+
 export function isVisitTimeAllowed(
-  ticket: TicketAvailabilityWindow,
+  ticket: TicketAvailabilityWindow & {
+    timeslotDurationMinutes?: number | null
+    timeslotIntervalMinutes?: number | null
+  },
   visitTime: string | null | undefined,
 ): boolean {
   if (!ticketHasOperationHours(ticket)) return true
   if (!visitTime) return false
   const time = visitTime.slice(0, 5)
+
+  const duration = ticket.timeslotDurationMinutes ?? 0
+  if (duration > 0) {
+    return buildTimeslotRanges(
+      ticket.operationHoursFrom,
+      ticket.operationHoursTo,
+      duration,
+      ticket.timeslotIntervalMinutes ?? 60,
+    ).some((range) => range.value === time)
+  }
+
   const from = ticket.operationHoursFrom?.slice(0, 5)
   const to = ticket.operationHoursTo?.slice(0, 5)
   if (from && time < from) return false
