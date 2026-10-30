@@ -234,4 +234,21 @@ export const adminTransactionService = {
     })
     return data
   },
+
+  /**
+   * Re-check the payment gateway for pending/cancelled orders
+   * (e.g. customer was charged but local status stayed cancelled).
+   */
+  async verifyPayment(uuid: string): Promise<{
+    success: boolean
+    message: string
+    payment_status?: string
+  }> {
+    const { data } = await adminApi.post<{
+      success: boolean
+      message: string
+      payment_status?: string
+    }>(`/v1/transactions/${uuid}/verify-payment`)
+    return data
+  },
 }
