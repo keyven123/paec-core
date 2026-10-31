@@ -5,6 +5,7 @@ import {
   Loader2,
   Mail,
   QrCode,
+  ShieldCheck,
   Ticket,
   User,
   Users,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { toast } from 'sonner'
 
 import type { AdminTransactionDetail } from '@/services/adminTransactionService'
 import {
@@ -107,6 +109,7 @@ export function AdminTransactionDetailModal({
   const [error, setError] = useState<string | null>(null)
   const [sendOpen, setSendOpen] = useState(false)
   const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   const load = useCallback(async (uuid: string) => {
     setLoading(true)
@@ -124,6 +127,7 @@ export function AdminTransactionDetailModal({
     setTransaction(null)
     setSendOpen(false)
     setRescheduleOpen(false)
+    setVerifying(false)
     if (transactionUuid) void load(transactionUuid)
   }, [transactionUuid, load])
 
@@ -147,6 +151,33 @@ export function AdminTransactionDetailModal({
     transaction?.payment_status === 'paid' &&
     getSendableTickets(tickets).length > 0
   const canReschedule = canRescheduleTransaction(transaction)
+  const canVerifyPayment =
+    !!transaction &&
+    (transaction.payment_status === 'pending' ||
+      transaction.payment_status === 'cancelled' ||
+      transaction.payment_status === 'failed')
+
+  const handleVerifyPayment = async () => {
+    if (!transaction || verifying) return
+    setVerifying(true)
+    setSendOpen(false)
+    setRescheduleOpen(false)
+    try {
+      const result = await adminTransactionService.verifyPayment(transaction.uuid)
+      if (result.success) {
+        toast.success(result.message || 'Payment verified. Order marked as paid.')
+        await load(transaction.uuid)
+      } else {
+        toast.message(result.message || 'Payment was not confirmed by the gateway.')
+        await load(transaction.uuid)
+      }
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to verify payment.'))
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   const orders = transaction?.transaction_orders ?? []
   const scheduleStart = formatTime(transaction?.schedule_time?.time_start)
   const scheduleEnd = formatTime(transaction?.schedule_time?.time_end)
@@ -210,6 +241,25 @@ export function AdminTransactionDetailModal({
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {canVerifyPayment ? (
+              <button
+                type="button"
+                onClick={() => void handleVerifyPayment()}
+                disabled={verifying}
+                aria-label="Verify payment"
+                title="Check the payment gateway in case the customer was already charged"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-orange-300 bg-orange-50 px-3 text-xs font-semibold text-paec-orange transition-colors hover:bg-orange-100 disabled:opacity-60"
+              >
+                {verifying ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="size-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {verifying ? 'Verifying…' : 'Verify'}
+                </span>
+              </button>
+            ) : null}
             {canReschedule ? (
               <button
                 type="button"
