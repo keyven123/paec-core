@@ -32,7 +32,6 @@ import {
   loadPendingPayment,
   pendingPaymentSummary,
 } from '@/lib/pendingPayment'
-import { trackPurchase } from '@/lib/metaPixel'
 import { cn } from '@/lib/utils'
 import { getProviderMeta } from '@/services/paymentGatewayService'
 import { transactionService } from '@/services/transactionService'
@@ -81,45 +80,27 @@ export function PaymentSuccessReturnPage() {
             setState({ status: 'paid-elsewhere' })
             return
           }
-          const confirmations =
+          // Persist confirmation and go to the success page — fire Purchase there
+          // so Meta / the browser extension see it on the final confirmation URL.
+          saveOrderConfirmation(
             pending.orders && result.orders
               ? buildGroupOrderConfirmations(
                   pending.orders,
                   result.orders,
                   pending.customer,
                 )
-              : [
-                  buildOrderConfirmation(
-                    pending.order,
-                    result,
-                    pending.customer,
-                  ),
-                ]
-          saveOrderConfirmation(confirmations)
-
-          for (const item of confirmations) {
-            const txUuid =
-              item.transactionUuid?.trim() ||
-              result.transaction?.uuid ||
-              transactionUuid
-            trackPurchase(
-              {
-                content_name: item.order.attractionName,
-                content_ids: [
-                  item.order.eventUuid || item.order.attractionId,
-                ].filter(Boolean),
-                content_type: 'product',
-                value: Number(item.order.total ?? 0),
-                currency: 'PHP',
-                num_items: item.tickets.length || item.order.tickets.length,
-                order_id: item.orderNumber || txUuid,
-              },
-              {
-                eventID: `purchase_${txUuid}`,
-                dedupeKey: `purchase_${txUuid}`,
-              },
-            )
-          }
+              : buildOrderConfirmation(
+                  pending.order,
+                  {
+                    ...result,
+                    transaction: {
+                      ...result.transaction,
+                      uuid: result.transaction?.uuid || transactionUuid,
+                    },
+                  },
+                  pending.customer,
+                ),
+          )
 
           clearCheckoutSession()
           clearPendingPayment()

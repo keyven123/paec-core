@@ -49,36 +49,41 @@ export function OrderSuccessPage() {
   const qrRefs = useRef(new Map<string, HTMLDivElement>())
   const groupQrRef = useRef<HTMLDivElement>(null)
 
-  // Browser Purchase for every confirmed order (deduped; matches server CAPI event_id).
+  // Browser Purchase + PaymentSuccessful on the confirmation page (after gateway return).
   useEffect(() => {
     if (confirmations.length === 0) return
 
-    for (const item of confirmations) {
-      const transactionUuid = item.transactionUuid?.trim() || ''
-      const eventId = transactionUuid
-        ? `purchase_${transactionUuid}`
-        : item.orderNumber
-          ? `purchase_order_${item.orderNumber}`
-          : undefined
+    const timer = window.setTimeout(() => {
+      for (const item of confirmations) {
+        const transactionUuid = item.transactionUuid?.trim() || ''
+        const eventId = transactionUuid
+          ? `purchase_${transactionUuid}`
+          : item.orderNumber
+            ? `purchase_order_${item.orderNumber}`
+            : undefined
 
-      trackPurchase(
-        {
-          content_name: item.order.attractionName,
-          content_ids: [
-            item.order.eventUuid || item.order.attractionId,
-          ].filter(Boolean),
-          content_type: 'product',
-          value: Number(item.order.total ?? 0),
-          currency: 'PHP',
-          num_items: item.tickets.length || item.order.tickets.length,
-          order_id: item.orderNumber || transactionUuid || undefined,
-        },
-        {
-          eventID: eventId,
-          dedupeKey: eventId || item.order.attractionId,
-        },
-      )
-    }
+        trackPurchase(
+          {
+            content_name: item.order.attractionName,
+            content_ids: [
+              item.order.eventUuid || item.order.attractionId,
+            ].filter(Boolean),
+            content_type: 'product',
+            value: Number(item.order.total ?? 0),
+            currency: 'PHP',
+            num_items: item.tickets.length || item.order.tickets.length,
+            order_id: item.orderNumber || transactionUuid || undefined,
+          },
+          {
+            eventID: eventId,
+            dedupeKey: eventId || item.order.attractionId,
+            delayMs: 250,
+          },
+        )
+      }
+    }, 400)
+
+    return () => window.clearTimeout(timer)
   }, [confirmations])
 
   if (!confirmation) {
