@@ -3,6 +3,8 @@
  * Pixel ID comes from project Admin → Meta Pixel (public API) or VITE_META_PIXEL_ID.
  */
 
+import { API_BASE_URL } from '@/lib/api'
+
 declare global {
   interface Window {
     fbq?: {
@@ -118,21 +120,16 @@ function reportBrowserEvent(payload: {
     page_url: payload.page_url || window.location.href,
   })
 
-  try {
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const blob = new Blob([body], { type: 'application/json' })
-      navigator.sendBeacon('/api/v1/public/cms/meta-pixel/events', blob)
-      return
-    }
-  } catch {
-    // fall through to fetch
-  }
+  // Must use the Laravel API host (e.g. api.amusements.global), not the SPA origin.
+  // Relative `/api/...` hits the frontend host in production and returns HTML.
+  const endpoint = `${API_BASE_URL.replace(/\/+$/, '')}/v1/public/cms/meta-pixel/events`
 
-  void fetch('/api/v1/public/cms/meta-pixel/events', {
+  void fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body,
     keepalive: true,
+    mode: 'cors',
   }).catch(() => {
     // never block storefront UX on audit logging
   })
