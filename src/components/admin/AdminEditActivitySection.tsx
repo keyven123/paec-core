@@ -97,12 +97,6 @@ export function AdminEditActivitySection({
         return false
       }
     }
-    if (step === 3 && form.enableMetaPixel) {
-      if (!form.metaPixelId.trim() || !form.metaPixelAccessToken.trim()) {
-        toast.error('Meta Pixel ID and access token are required.')
-        return false
-      }
-    }
     return true
   }
 
@@ -230,11 +224,7 @@ export function AdminEditActivitySection({
         )}
         {step === 2 && <StepImages form={form} onChange={updateForm} />}
         {step === 3 && (
-          <StepAttendeeTracking
-            form={form}
-            onChange={updateForm}
-            showMetaPixel
-          />
+          <StepAttendeeTracking form={form} onChange={updateForm} />
         )}
         {step === PAYMENT_STEP && (
           <StepPaymentGateway form={form} onChange={updateForm} />

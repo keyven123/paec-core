@@ -187,10 +187,6 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
   const existingShowcaseUrls =
     editForm.existingShowcaseImages?.map((image) => image.url) ?? []
 
-  const trackingSummary = editForm.enableMetaPixel
-    ? `Meta Pixel enabled · ID: ${editForm.metaPixelId || '—'}`
-    : 'Meta Pixel disabled'
-
   return (
     <div className="space-y-4">
       <section className={sectionClassName}>
@@ -298,9 +294,6 @@ export function StepSummary({ form, onEditStep }: StepSummaryProps) {
                   : 'None'
               }
             />
-            {editForm.enableMetaPixel !== undefined ? (
-              <Field label="Tracking" value={trackingSummary} />
-            ) : null}
           </div>
         </ReviewBlock>
 

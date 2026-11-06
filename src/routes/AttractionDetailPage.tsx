@@ -28,6 +28,7 @@ import {
   getPhoneHref,
   openEmailComposer,
 } from '@/lib/contactLinks'
+import { trackViewContent } from '@/lib/metaPixel'
 import { cn } from '@/lib/utils'
 import { marketplaceService } from '@/services/marketplaceService'
 
@@ -70,6 +71,16 @@ export function AttractionDetailPage() {
         setRelated(
           detail ? all.filter((item) => item.id !== detail.id).slice(0, 4) : [],
         )
+        if (detail) {
+          trackViewContent({
+            content_name: detail.name,
+            content_category: detail.category || 'Activity',
+            content_ids: [detail.id],
+            content_type: 'product',
+            value: Number(detail.price ?? 0),
+            currency: 'PHP',
+          })
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
