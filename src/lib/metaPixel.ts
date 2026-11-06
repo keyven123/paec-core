@@ -92,6 +92,50 @@ export function initMetaPixel(
   } catch {
     // ignore
   }
+  reportBrowserEvent({
+    event_name: 'PageView',
+    page_url: typeof window !== 'undefined' ? window.location.href : undefined,
+  })
+}
+
+function reportBrowserEvent(payload: {
+  event_name: string
+  event_id?: string
+  content_name?: string
+  page_url?: string
+  value?: number
+  currency?: string
+  content_ids?: string[]
+  order_id?: string
+  num_items?: number
+}): void {
+  if (typeof window === 'undefined') return
+  // Skip admin console beacons.
+  if (window.location.pathname.startsWith('/admin')) return
+
+  const body = JSON.stringify({
+    ...payload,
+    page_url: payload.page_url || window.location.href,
+  })
+
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([body], { type: 'application/json' })
+      navigator.sendBeacon('/api/v1/public/cms/meta-pixel/events', blob)
+      return
+    }
+  } catch {
+    // fall through to fetch
+  }
+
+  void fetch('/api/v1/public/cms/meta-pixel/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body,
+    keepalive: true,
+  }).catch(() => {
+    // never block storefront UX on audit logging
+  })
 }
 
 export function trackViewContent(eventData: {
@@ -104,13 +148,21 @@ export function trackViewContent(eventData: {
 }): void {
   if (typeof window === 'undefined' || !window.fbq) return
 
-  window.fbq('track', 'ViewContent', {
+  const payload = {
     content_name: eventData.content_name,
     content_category: eventData.content_category || 'Event',
     content_ids: eventData.content_ids,
     content_type: eventData.content_type || 'event',
     value: eventData.value || 0,
     currency: eventData.currency || 'PHP',
+  }
+  window.fbq('track', 'ViewContent', payload)
+  reportBrowserEvent({
+    event_name: 'ViewContent',
+    content_name: payload.content_name,
+    content_ids: payload.content_ids,
+    value: payload.value,
+    currency: payload.currency,
   })
 }
 
@@ -125,7 +177,7 @@ export function trackInitiateCheckout(eventData: {
 }): void {
   if (typeof window === 'undefined' || !window.fbq) return
 
-  window.fbq('track', 'InitiateCheckout', {
+  const payload = {
     content_name: eventData.content_name,
     content_category: eventData.content_category || 'Event',
     content_ids: eventData.content_ids,
@@ -133,6 +185,15 @@ export function trackInitiateCheckout(eventData: {
     value: eventData.value,
     currency: eventData.currency || 'PHP',
     num_items: eventData.num_items || 1,
+  }
+  window.fbq('track', 'InitiateCheckout', payload)
+  reportBrowserEvent({
+    event_name: 'InitiateCheckout',
+    content_name: payload.content_name,
+    content_ids: payload.content_ids,
+    value: payload.value,
+    currency: payload.currency,
+    num_items: payload.num_items,
   })
 }
 
@@ -147,7 +208,7 @@ export function trackAddPaymentInfo(eventData: {
 }): void {
   if (typeof window === 'undefined' || !window.fbq) return
 
-  window.fbq('track', 'AddPaymentInfo', {
+  const payload = {
     content_name: eventData.content_name,
     content_category: eventData.content_category || 'Event',
     content_ids: eventData.content_ids,
@@ -155,6 +216,15 @@ export function trackAddPaymentInfo(eventData: {
     value: eventData.value,
     currency: eventData.currency || 'PHP',
     num_items: eventData.num_items || 1,
+  }
+  window.fbq('track', 'AddPaymentInfo', payload)
+  reportBrowserEvent({
+    event_name: 'AddPaymentInfo',
+    content_name: payload.content_name,
+    content_ids: payload.content_ids,
+    value: payload.value,
+    currency: payload.currency,
+    num_items: payload.num_items,
   })
 }
 
@@ -179,6 +249,9 @@ export function pixelReady(callback: () => void, timeout = 8000): void {
 /**
  * Browser Purchase — eventID should match server CAPI (`purchase_{transactionUuid}`)
  * so Meta can dedupe browser + Conversions API.
+ *
+ * Dedupe is recorded only after fbq actually fires, so a mid-redirect call that
+ * never reaches Meta cannot block the success-page Purchase.
  */
 export function trackPurchase(
   eventData: {
@@ -191,15 +264,15 @@ export function trackPurchase(
     num_items?: number
     order_id?: string
   },
-  options?: { eventID?: string; dedupeKey?: string },
+  options?: { eventID?: string; dedupeKey?: string; delayMs?: number },
 ): void {
   if (typeof window === 'undefined') return
 
   const dedupeKey = options?.dedupeKey || options?.eventID
-  if (dedupeKey) {
+  const storageKey = dedupeKey ? `meta_purchase_v2_${dedupeKey}` : null
+  if (storageKey) {
     try {
-      if (sessionStorage.getItem(`meta_purchase_${dedupeKey}`)) return
-      sessionStorage.setItem(`meta_purchase_${dedupeKey}`, '1')
+      if (sessionStorage.getItem(storageKey) === '1') return
     } catch {
       // ignore storage failures
     }
@@ -210,24 +283,52 @@ export function trackPurchase(
     content_category: eventData.content_category || 'Event',
     content_ids: eventData.content_ids,
     content_type: eventData.content_type || 'product',
-    value: eventData.value,
+    value: Number(eventData.value) || 0,
     currency: eventData.currency || 'PHP',
     num_items: eventData.num_items || 1,
     order_id: eventData.order_id,
   }
 
   const fire = () => {
-    if (!window.fbq) return
+    if (typeof window.fbq !== 'function') return
+
+    // Mark only after we know fbq is ready to send.
+    if (storageKey) {
+      try {
+        if (sessionStorage.getItem(storageKey) === '1') return
+        sessionStorage.setItem(storageKey, '1')
+      } catch {
+        // ignore
+      }
+    }
+
     const opts = options?.eventID ? { eventID: options.eventID } : undefined
     window.fbq('track', 'Purchase', payload, opts)
     window.fbq('trackCustom', 'PaymentSuccessful', payload, opts)
+    reportBrowserEvent({
+      event_name: 'Purchase',
+      event_id: options?.eventID,
+      content_name: payload.content_name,
+      content_ids: payload.content_ids,
+      value: payload.value,
+      currency: payload.currency,
+      order_id: payload.order_id,
+      num_items: payload.num_items,
+    })
   }
 
-  if (typeof window.fbq === 'function') {
-    fire()
-  } else {
-    pixelReady(fire)
+  const delayMs = options?.delayMs ?? 0
+  const run = () => {
+    pixelReady(() => {
+      if (delayMs > 0) {
+        window.setTimeout(fire, delayMs)
+      } else {
+        fire()
+      }
+    }, 10000)
   }
+
+  run()
 }
 
 function readCookie(name: string): string | null {
