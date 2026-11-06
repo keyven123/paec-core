@@ -168,7 +168,16 @@ export function AdminTransactionDetailModal({
         toast.success(result.message || 'Payment verified. Order marked as paid.')
         await load(transaction.uuid)
       } else {
-        toast.message(result.message || 'Payment was not confirmed by the gateway.')
+        const message = result.message || 'Payment was not confirmed by the gateway.'
+        const isFailedOrCancelled =
+          /cancelled or failed|no payment was taken|marked failed/i.test(message)
+        if (isFailedOrCancelled) {
+          toast.error(message)
+        } else if (/unable to verify/i.test(message)) {
+          toast.warning(message)
+        } else {
+          toast.message(message)
+        }
         await load(transaction.uuid)
       }
     } catch (err) {

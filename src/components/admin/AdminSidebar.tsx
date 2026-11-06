@@ -9,6 +9,7 @@ import {
   KeyRound,
   LayoutDashboard,
   LogOut,
+  Radio,
   Tag,
   Users,
   X,
@@ -33,6 +34,7 @@ const navItems = [
   { to: '/admin/event-management', label: 'Event Management', icon: Building2 },
   { to: '/admin/promocode', label: 'Promo Codes', icon: Tag },
   { to: '/admin/payment-gateways', label: 'Payment Gateway', icon: KeyRound },
+  { to: '/admin/meta-pixel', label: 'Meta Pixel', icon: Radio },
   { to: '/admin/usermanagement', label: 'User Management', icon: Users },
   { to: '/admin/intelligence', label: 'Intelligence', icon: BarChart3 },
   { to: '/admin/cms', label: 'Content Management', icon: FileText },
@@ -90,6 +92,8 @@ export function AdminSidebar({
             (item.to === '/admin/intelligence' &&
               pathname.startsWith('/admin/intelligence')) ||
             (item.to === '/admin/cms' && pathname.startsWith('/admin/cms')) ||
+            (item.to === '/admin/meta-pixel' &&
+              pathname.startsWith('/admin/meta-pixel')) ||
             (item.to === '/admin/careers' && pathname.startsWith('/admin/careers'))
 
           return (

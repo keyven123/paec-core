@@ -32,6 +32,7 @@ import {
   loadPendingPayment,
   pendingPaymentSummary,
 } from '@/lib/pendingPayment'
+import { trackPurchase } from '@/lib/metaPixel'
 import { cn } from '@/lib/utils'
 import { getProviderMeta } from '@/services/paymentGatewayService'
 import { transactionService } from '@/services/transactionService'
@@ -80,15 +81,46 @@ export function PaymentSuccessReturnPage() {
             setState({ status: 'paid-elsewhere' })
             return
           }
-          saveOrderConfirmation(
+          const confirmations =
             pending.orders && result.orders
               ? buildGroupOrderConfirmations(
                   pending.orders,
                   result.orders,
                   pending.customer,
                 )
-              : buildOrderConfirmation(pending.order, result, pending.customer),
-          )
+              : [
+                  buildOrderConfirmation(
+                    pending.order,
+                    result,
+                    pending.customer,
+                  ),
+                ]
+          saveOrderConfirmation(confirmations)
+
+          for (const item of confirmations) {
+            const txUuid =
+              item.transactionUuid?.trim() ||
+              result.transaction?.uuid ||
+              transactionUuid
+            trackPurchase(
+              {
+                content_name: item.order.attractionName,
+                content_ids: [
+                  item.order.eventUuid || item.order.attractionId,
+                ].filter(Boolean),
+                content_type: 'product',
+                value: Number(item.order.total ?? 0),
+                currency: 'PHP',
+                num_items: item.tickets.length || item.order.tickets.length,
+                order_id: item.orderNumber || txUuid,
+              },
+              {
+                eventID: `purchase_${txUuid}`,
+                dedupeKey: `purchase_${txUuid}`,
+              },
+            )
+          }
+
           clearCheckoutSession()
           clearPendingPayment()
           void navigate({ to: '/checkout/success', replace: true })

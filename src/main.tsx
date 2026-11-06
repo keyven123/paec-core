@@ -24,6 +24,7 @@ import { AdminEventManagementPage } from './routes/admin/AdminEventManagementPag
 import { AdminDashboardRoute } from './routes/admin/AdminDashboardRoute'
 import { AdminIntelligencePage } from './routes/admin/AdminIntelligencePage'
 import { AdminLayout } from './routes/admin/AdminLayout'
+import { AdminMetaPixelPage } from './routes/admin/AdminMetaPixelPage'
 import { AdminPaymentGatewayPage } from './routes/admin/AdminPaymentGatewayPage'
 import { AdminPromoCodePage } from './routes/admin/AdminPromoCodePage'
 import { AdminTransactionPage } from './routes/admin/AdminTransactionPage'
@@ -49,6 +50,7 @@ import {
   PaymentSuccessReturnPage,
 } from './routes/PaymentReturnPage'
 import { VenueDetailPage } from './routes/VenueDetailPage'
+import { MetaPixelBoot } from './components/MetaPixelBoot'
 import { Toaster } from './components/ui/toast'
 import type { AccountSection } from './components/account/AccountSidebar'
 
@@ -67,7 +69,12 @@ function parseAccountSection(value: unknown): AccountSection {
 }
 
 const rootRoute = createRootRoute({
-  component: () => <Outlet />,
+  component: () => (
+    <>
+      <MetaPixelBoot />
+      <Outlet />
+    </>
+  ),
   notFoundComponent: () => <NotFoundRedirect />,
 })
 
@@ -251,6 +258,12 @@ const adminPaymentGatewayRoute = createRoute({
   component: AdminPaymentGatewayPage,
 })
 
+const adminMetaPixelRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: '/admin/meta-pixel',
+  component: AdminMetaPixelPage,
+})
+
 const adminUserManagementRoute = createRoute({
   getParentRoute: () => adminLayoutRoute,
   path: '/admin/usermanagement',
@@ -341,6 +354,7 @@ const routeTree = rootRoute.addChildren([
     adminVenueInquiriesRoute,
     adminPromoCodeRoute,
     adminPaymentGatewayRoute,
+    adminMetaPixelRoute,
     adminUserManagementRoute,
     adminUserDetailRoute,
     adminUserStatsRoute,

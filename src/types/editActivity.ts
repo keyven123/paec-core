@@ -19,15 +19,12 @@ export type EditActivityForm = CreateActivityForm & {
   existingPortraitImage: ExistingImage | null
   existingFeaturedImage: ExistingImage | null
   existingShowcaseImages: ExistingImage[]
-  enableMetaPixel: boolean
-  metaPixelId: string
-  metaPixelAccessToken: string
 }
 
 export const editActivitySteps = [
   { id: 1, label: 'Basics', subtitle: 'Attraction details' },
   { id: 2, label: 'Images', subtitle: 'Visuals & preview' },
-  { id: 3, label: 'Attendee & Tracking', subtitle: 'Fields & pixel' },
+  { id: 3, label: 'Attendee fields', subtitle: 'Custom registration fields' },
   { id: PAYMENT_STEP, label: 'Payment', subtitle: 'Payment gateways' },
   { id: SUMMARY_STEP, label: 'Summary', subtitle: 'Review before publish' },
   { id: 6, label: 'Preview', subtitle: 'Microsite preview' },

@@ -9,7 +9,7 @@ import {
   ShoppingCart,
   UserCircle2,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { CheckoutResponse } from '@/services/transactionService'
@@ -37,11 +37,13 @@ import { useStoredUser } from '@/lib/useStoredUser'
 import { addSessionToCart, cartItemPayload, cartItemSession } from '@/lib/cart'
 import {
   clearCheckoutSession,
+  getTicketCount,
   loadCheckoutSession,
   saveCheckoutSession,
   validateCheckoutDetails,
 } from '@/lib/checkoutSession'
 import { getApiErrorMessage } from '@/lib/api'
+import { trackAddPaymentInfo, trackInitiateCheckout } from '@/lib/metaPixel'
 import {
   buildGroupOrderConfirmations,
   buildOrderConfirmation,
@@ -99,6 +101,7 @@ export function CheckoutPage() {
   )
   const [paynamicsChannel, setPaynamicsChannel] =
     useState<PaynamicsChannel | null>(null)
+  const initiateCheckoutSent = useRef(false)
 
   const detailsComplete =
     Object.keys(validateCheckoutDetails(isLoggedIn, guest)).length === 0
@@ -114,6 +117,44 @@ export function CheckoutPage() {
   const orderTotal = isLoggedIn
     ? cartEntries.reduce((sum, entry) => sum + entry.session.total, 0)
     : (session?.total ?? 0)
+
+  // Capture InitiateCheckout once when the checkout page is shown with items.
+  useEffect(() => {
+    if (initiateCheckoutSent.current) return
+
+    if (isLoggedIn) {
+      if (cartItems === null || cartEntries.length === 0) return
+      initiateCheckoutSent.current = true
+      trackInitiateCheckout({
+        content_name:
+          cartEntries.length === 1
+            ? cartEntries[0].session.attractionName
+            : `Cart (${cartEntries.length} activities)`,
+        content_ids: cartEntries
+          .map((entry) => entry.session.eventUuid)
+          .filter(Boolean),
+        content_type: 'product',
+        value: orderTotal,
+        currency: 'PHP',
+        num_items: cartEntries.reduce(
+          (sum, entry) => sum + getTicketCount(entry.session),
+          0,
+        ),
+      })
+      return
+    }
+
+    if (!session) return
+    initiateCheckoutSent.current = true
+    trackInitiateCheckout({
+      content_name: session.attractionName,
+      content_ids: [session.eventUuid || session.attractionId].filter(Boolean),
+      content_type: 'product',
+      value: session.total,
+      currency: 'PHP',
+      num_items: getTicketCount(session),
+    })
+  }, [isLoggedIn, cartItems, cartEntries, orderTotal, session])
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -371,6 +412,24 @@ export function CheckoutPage() {
         gateway?.provider === 'paynamics' && paynamicsChannel
           ? { payment_channel: paynamicsChannel }
           : {}
+
+      trackAddPaymentInfo({
+        content_name: isLoggedIn
+          ? 'Cart checkout'
+          : (session?.attractionName ?? 'Checkout'),
+        content_ids: isLoggedIn
+          ? cartEntries.map((entry) => entry.session.eventUuid).filter(Boolean)
+          : [session?.eventUuid || session?.attractionId || 'checkout'],
+        content_type: 'product',
+        value: orderTotal,
+        currency: 'PHP',
+        num_items: isLoggedIn
+          ? cartEntries.reduce(
+              (sum, entry) => sum + getTicketCount(entry.session),
+              0,
+            )
+          : getTicketCount(session ?? { tickets: [] }),
+      })
 
       if (loggedInUser) {
         const result = await cartService.checkout({

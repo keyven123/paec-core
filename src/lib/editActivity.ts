@@ -111,9 +111,6 @@ export function mapEventToEditForm(event: AdminEvent): EditActivityForm {
       url: image.url,
     })),
     paymentGateways: event.payment_gateways ?? [],
-    enableMetaPixel: !!event.track_event_meta,
-    metaPixelId: event.meta_pixel_id ?? '',
-    metaPixelAccessToken: event.meta_pixel_key ?? '',
   }
 }
 
@@ -172,19 +169,6 @@ export function buildEditActivityFormData(form: EditActivityForm): FormData {
   })
 
   appendPaymentGatewayUuids(formData, form)
-
-  formData.append('enable_meta_pixel', form.enableMetaPixel ? 'true' : 'false')
-  if (form.enableMetaPixel) {
-    if (form.metaPixelId.trim()) {
-      formData.append('meta_pixel_id', form.metaPixelId.trim())
-    }
-    if (form.metaPixelAccessToken.trim()) {
-      formData.append(
-        'meta_pixel_access_token',
-        form.metaPixelAccessToken.trim(),
-      )
-    }
-  }
 
   if (form.attendeeFields.length > 0) {
     const otherInfo = form.attendeeFields

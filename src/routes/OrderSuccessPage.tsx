@@ -11,7 +11,7 @@ import {
   Ticket,
   UserPlus,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { ConfirmedTicket } from '@/lib/orderConfirmation'
@@ -24,6 +24,7 @@ import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
 import { useStoredUser } from '@/lib/useStoredUser'
+import { trackPurchase } from '@/lib/metaPixel'
 import { loadOrderConfirmations } from '@/lib/orderConfirmation'
 import { downloadGroupPassPdf, downloadTicketsPdf } from '@/lib/ticketDownload'
 import { cn } from '@/lib/utils'
@@ -47,6 +48,38 @@ export function OrderSuccessPage() {
   const [downloading, setDownloading] = useState<string | null>(null)
   const qrRefs = useRef(new Map<string, HTMLDivElement>())
   const groupQrRef = useRef<HTMLDivElement>(null)
+
+  // Browser Purchase for every confirmed order (deduped; matches server CAPI event_id).
+  useEffect(() => {
+    if (confirmations.length === 0) return
+
+    for (const item of confirmations) {
+      const transactionUuid = item.transactionUuid?.trim() || ''
+      const eventId = transactionUuid
+        ? `purchase_${transactionUuid}`
+        : item.orderNumber
+          ? `purchase_order_${item.orderNumber}`
+          : undefined
+
+      trackPurchase(
+        {
+          content_name: item.order.attractionName,
+          content_ids: [
+            item.order.eventUuid || item.order.attractionId,
+          ].filter(Boolean),
+          content_type: 'product',
+          value: Number(item.order.total ?? 0),
+          currency: 'PHP',
+          num_items: item.tickets.length || item.order.tickets.length,
+          order_id: item.orderNumber || transactionUuid || undefined,
+        },
+        {
+          eventID: eventId,
+          dedupeKey: eventId || item.order.attractionId,
+        },
+      )
+    }
+  }, [confirmations])
 
   if (!confirmation) {
     return (

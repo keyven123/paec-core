@@ -20,6 +20,8 @@ export type ConfirmedTicket = {
 
 export type OrderConfirmation = {
   orderNumber: string
+  /** Transaction UUID — used for Meta Purchase eventID / CAPI dedupe. */
+  transactionUuid?: string | null
   /** Order-level QR; scanning it admits every ticket in the order. */
   orderQrCode?: string | null
   holderName: string
@@ -60,6 +62,7 @@ export function buildOrderConfirmation(
 
   return {
     orderNumber: response.transaction?.order_number ?? '',
+    transactionUuid: response.transaction?.uuid ?? null,
     orderQrCode: response.transaction?.qr_code ?? null,
     holderName: customer.name,
     email: customer.email,
