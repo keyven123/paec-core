@@ -207,6 +207,7 @@ export function BookingSidebar({
             visitDate,
             ticket.operationDays,
             ticket.operationCustomDays,
+            ticket.operationAllowedDates,
           )
             ? operationDayUnavailableMessage(
                 visitDate,
@@ -352,6 +353,7 @@ export function BookingSidebar({
                     visitDate,
                     ticket.operationDays,
                     ticket.operationCustomDays,
+                    ticket.operationAllowedDates,
                   )
                     ? operationDayUnavailableBadge(
                         visitDate,

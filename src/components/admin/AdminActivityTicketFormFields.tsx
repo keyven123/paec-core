@@ -24,6 +24,18 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-red-600">{message}</p>
 }
 
+/** Avoid UTC shift when formatting Y-m-d specific dates. */
+function formatSpecificDateLabel(date: string) {
+  const [year, month, day] = date.split('-').map(Number)
+  if (!year || !month || !day) return date
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 function FieldLabel({
   htmlFor,
   label,
@@ -155,6 +167,8 @@ export function AdminActivityTicketFormFields({
   formatPrice,
   formatTime,
 }: AdminActivityTicketFormFieldsProps) {
+  const [allowedDateDraft, setAllowedDateDraft] = useState('')
+
   const fieldError = (key: string) => {
     const value = validationErrors[key]
     if (!value) return undefined
@@ -165,6 +179,20 @@ export function AdminActivityTicketFormFields({
   const scheduleTimes =
     schedules.find((schedule) => schedule.uuid === formData.schedule_uuid)
       ?.schedule_times ?? []
+
+  const addAllowedDate = () => {
+    const next = allowedDateDraft.trim()
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(next)) return
+    if (formData.operation_allowed_dates.includes(next)) {
+      setAllowedDateDraft('')
+      return
+    }
+    setFormData({
+      ...formData,
+      operation_allowed_dates: [...formData.operation_allowed_dates, next].sort(),
+    })
+    setAllowedDateDraft('')
+  }
 
   return (
     <div className="max-h-[60vh] space-y-4 overflow-y-auto py-1 pr-1">
@@ -820,6 +848,7 @@ export function AdminActivityTicketFormFields({
                       'sat',
                       'sun',
                     ] as const,
+                    operation_allowed_dates: [],
                     operation_hours_from: '',
                     operation_hours_to: '',
                     with_timeslot: false,
@@ -832,7 +861,7 @@ export function AdminActivityTicketFormFields({
         />
         <span className="flex items-center gap-1">
           Operations
-          <InfoTip text="Limit this ticket to specific days of the week, set operation hours, and optionally define Timeslots (e.g. 180-minute windows like 4PM–7PM)." />
+          <InfoTip text="Limit this ticket to specific days of the week, allow exception dates, set operation hours, and optionally define Timeslots (e.g. 180-minute windows like 4PM–7PM)." />
         </span>
       </label>
 
@@ -922,11 +951,76 @@ export function AdminActivityTicketFormFields({
                 </div>
                 <FieldError message={fieldError('operation_custom_days')} />
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  Unchecked days are not available for this ticket.
+                  Unchecked days are not available for this ticket, unless you
+                  add them under Specific dates below.
                 </p>
               </div>
             ) : null}
           </div>
+
+          <div className="sm:col-span-2">
+            <FieldLabel
+              htmlFor={`${idPrefix}-operation-allowed-date`}
+              label="Specific dates"
+              optional
+            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                id={`${idPrefix}-operation-allowed-date`}
+                type="date"
+                value={allowedDateDraft}
+                onChange={(event) => setAllowedDateDraft(event.target.value)}
+                className={cn(
+                  inputClassName,
+                  'sm:max-w-xs',
+                  fieldError('operation_allowed_dates') && inputErrorClassName,
+                )}
+              />
+              <button
+                type="button"
+                onClick={addAllowedDate}
+                disabled={!allowedDateDraft}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-sm font-medium text-paec-violet transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus className="size-4" />
+                Add date
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              These dates stay bookable even if that weekday is unchecked (for
+              example, one Monday while Mondays are off).
+            </p>
+            <FieldError message={fieldError('operation_allowed_dates')} />
+            {formData.operation_allowed_dates.length > 0 ? (
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {formData.operation_allowed_dates.map((date) => (
+                  <li
+                    key={date}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-2.5 py-1 text-xs font-medium text-foreground"
+                  >
+                    <span>{formatSpecificDateLabel(date)}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${date}`}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          operation_allowed_dates:
+                            formData.operation_allowed_dates.filter(
+                              (item) => item !== date,
+                            ),
+                        })
+                      }
+                      className="grid size-4 place-items-center rounded-full text-muted-foreground transition hover:bg-violet-50 hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
           <div>
             <FieldLabel
               htmlFor={`${idPrefix}-operation-hours-from`}
