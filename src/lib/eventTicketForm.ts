@@ -54,6 +54,8 @@ export type EventTicketFormState = {
   operation_custom_days: Array<
     'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
   >
+  /** Y-m-d dates bookable even when that weekday is unchecked. */
+  operation_allowed_dates: string[]
   operation_hours_from: string
   operation_hours_to: string
   with_timeslot: boolean
@@ -95,6 +97,7 @@ export const emptyEventTicketForm = (): EventTicketFormState => ({
   with_operations: false,
   operation_days: 'any',
   operation_custom_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+  operation_allowed_dates: [],
   operation_hours_from: '',
   operation_hours_to: '',
   with_timeslot: false,
@@ -165,7 +168,9 @@ export function ticketToForm(
       (!!ticket.operation_days && ticket.operation_days !== 'any') ||
       !!ticket.operation_hours_from ||
       !!ticket.operation_hours_to ||
-      !!(ticket.timeslot_duration_minutes && ticket.timeslot_duration_minutes > 0),
+      !!(ticket.timeslot_duration_minutes && ticket.timeslot_duration_minutes > 0) ||
+      (Array.isArray(ticket.operation_allowed_dates) &&
+        ticket.operation_allowed_dates.length > 0),
     operation_days:
       ticket.operation_days === 'weekdays' ||
       ticket.operation_days === 'weekends' ||
@@ -177,6 +182,15 @@ export function ticketToForm(
           ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day),
         ) as Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>)
       : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+    operation_allowed_dates: Array.isArray(ticket.operation_allowed_dates)
+      ? [
+          ...new Set(
+            ticket.operation_allowed_dates
+              .map((date) => String(date).slice(0, 10))
+              .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)),
+          ),
+        ].sort()
+      : [],
     operation_hours_from: (ticket.operation_hours_from ?? '').slice(0, 5),
     operation_hours_to: (ticket.operation_hours_to ?? '').slice(0, 5),
     with_timeslot: !!(
@@ -260,10 +274,17 @@ export function validateEventTicketForm(
   if (form.with_operations) {
     if (
       form.operation_days === 'custom' &&
-      form.operation_custom_days.length === 0
+      form.operation_custom_days.length === 0 &&
+      form.operation_allowed_dates.length === 0
     ) {
       errors.operation_custom_days =
-        'Select at least one available day for custom operations'
+        'Select at least one available day, or add a specific date'
+    }
+    const invalidAllowedDate = form.operation_allowed_dates.find(
+      (date) => !/^\d{4}-\d{2}-\d{2}$/.test(date),
+    )
+    if (invalidAllowedDate) {
+      errors.operation_allowed_dates = 'Specific dates must use YYYY-MM-DD'
     }
     if (
       form.operation_hours_from &&
@@ -439,6 +460,10 @@ export function buildCreateTicketPayload(
       form.with_operations && form.operation_days === 'custom'
         ? form.operation_custom_days
         : null,
+    operation_allowed_dates:
+      form.with_operations && form.operation_allowed_dates.length > 0
+        ? [...form.operation_allowed_dates].sort()
+        : null,
     operation_hours_from:
       form.with_operations && form.operation_hours_from
         ? form.operation_hours_from
@@ -512,6 +537,10 @@ export function buildUpdateTicketPayload(
     operation_custom_days:
       form.with_operations && form.operation_days === 'custom'
         ? form.operation_custom_days
+        : null,
+    operation_allowed_dates:
+      form.with_operations && form.operation_allowed_dates.length > 0
+        ? [...form.operation_allowed_dates].sort()
         : null,
     operation_hours_from:
       form.with_operations && form.operation_hours_from

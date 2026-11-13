@@ -82,6 +82,7 @@ export type PublicEventTicket = {
   flash_sale_to?: string | null
   operation_days?: string | null
   operation_custom_days?: Array<string> | null
+  operation_allowed_dates?: Array<string> | null
   operation_hours_from?: string | null
   operation_hours_to?: string | null
   timeslot_duration_minutes?: number | null
@@ -335,6 +336,15 @@ export function mapPublicEventToAttraction(
             ) as Array<
               'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
             >)
+          : null,
+        operationAllowedDates: Array.isArray(ticket.operation_allowed_dates)
+          ? [
+              ...new Set(
+                ticket.operation_allowed_dates
+                  .map((date) => String(date).slice(0, 10))
+                  .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)),
+              ),
+            ].sort()
           : null,
         operationHoursFrom: ticket.operation_hours_from
           ? String(ticket.operation_hours_from).slice(0, 5)

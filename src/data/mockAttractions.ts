@@ -25,6 +25,7 @@ export type TicketType = {
   operationCustomDays?: Array<
     'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
   > | null
+  operationAllowedDates?: Array<string> | null
   operationHoursFrom?: string | null
   operationHoursTo?: string | null
   /** Length of each purchase visit window in minutes (e.g. 180 = 3 hours). */

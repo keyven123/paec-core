@@ -133,6 +133,7 @@ export function useHeaderBooking() {
           visitDate,
           selectedTicket.operationDays,
           selectedTicket.operationCustomDays,
+          selectedTicket.operationAllowedDates,
         )
           ? operationDayUnavailableMessage(
               visitDate,

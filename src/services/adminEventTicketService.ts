@@ -38,6 +38,7 @@ export type AdminEventTicket = {
   validity_days: number | null
   operation_days?: 'any' | 'weekdays' | 'weekends' | 'custom' | string | null
   operation_custom_days?: Array<string> | null
+  operation_allowed_dates?: Array<string> | null
   operation_hours_from?: string | null
   operation_hours_to?: string | null
   /** Length of each purchase visit window in minutes (e.g. 180 = 3 hours). */

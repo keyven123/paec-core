@@ -90,6 +90,8 @@ type TicketAvailabilityWindow = {
   flashSaleTo?: string | null
   operationDays?: OperationDaysMode
   operationCustomDays?: Array<OperationDayKey> | null
+  /** Y-m-d dates that remain bookable even when the weekday rule would block them. */
+  operationAllowedDates?: Array<string> | null
   operationHoursFrom?: string | null
   operationHoursTo?: string | null
   timeslotDurationMinutes?: number | null
@@ -150,12 +152,23 @@ export function isTicketCurrentlyOnSale(
   return isWithinSaleWindow(ticket.availableFrom, ticket.availableTo, now)
 }
 
+function isAllowedSpecificDate(
+  visitDate: string,
+  operationAllowedDates?: Array<string> | null,
+): boolean {
+  if (!operationAllowedDates?.length) return false
+  const normalized = visitDate.slice(0, 10)
+  return operationAllowedDates.some((date) => date.slice(0, 10) === normalized)
+}
+
 /** Manila weekday: Mon–Fri vs Sat–Sun, or custom checked days. */
 export function allowsOperationDay(
   visitDate: string,
   operationDays: OperationDaysMode | undefined,
   operationCustomDays?: Array<OperationDayKey> | null,
+  operationAllowedDates?: Array<string> | null,
 ): boolean {
+  if (isAllowedSpecificDate(visitDate, operationAllowedDates)) return true
   if (!operationDays || operationDays === 'any') return true
   const [y, m, d] = visitDate.split('-').map(Number)
   if (!y || !m || !d) return true
@@ -239,6 +252,7 @@ export function isTicketAvailableForVisitDate(
       visitDate,
       ticket.operationDays,
       ticket.operationCustomDays,
+      ticket.operationAllowedDates,
     )
   ) {
     return false
